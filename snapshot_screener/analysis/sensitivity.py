@@ -77,6 +77,11 @@ def run_sensitivity_sweep(
     if thresholds is None:
         thresholds = [3, 4, 5, 6]
 
+    if len(thresholds) < 2:
+        raise ValueError(
+            f"At least 2 thresholds required for sensitivity sweep, got {len(thresholds)}"
+        )
+
     # Collect representative fname sets per threshold
     threshold_fnames: dict[int, set[str]] = {}
     frame_counts: dict[int, int] = {}

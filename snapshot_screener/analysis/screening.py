@@ -121,8 +121,14 @@ def _sequence_similarity(features: List[FrameFeature]) -> tuple[float | None, st
     if len(session_ids) < 2:
         return None, "insufficient_data"
 
+    _MAX_PAIRS = 200
+    all_pairs = list(combinations(session_ids, 2))
+    if len(all_pairs) > _MAX_PAIRS:
+        import random
+        all_pairs = random.Random(42).sample(all_pairs, _MAX_PAIRS)
+
     similarities: list[float] = []
-    for s1, s2 in combinations(session_ids, 2):
+    for s1, s2 in all_pairs:
         seq_a = session_seqs[s1]
         seq_b = session_seqs[s2]
         max_len = max(len(seq_a), len(seq_b))

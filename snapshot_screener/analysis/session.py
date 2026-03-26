@@ -54,9 +54,11 @@ def separate_sessions(
             prev.is_session_end = True
             # Start new session
             session_num += 1
-            assert session_num <= 9999, (
-                f"Session count {session_num} exceeds maximum 9999"
-            )
+            if session_num > 9999:
+                raise ValueError(
+                    f"Session count exceeded 9999 for eqpid={eqpid!r}. "
+                    "Consider increasing session_gap_ms."
+                )
             seq = 0
         else:
             seq += 1
