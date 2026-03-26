@@ -6,10 +6,11 @@ Cassandra on subsequent runs.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence, Tuple
 
 _EXPECTED_SCHEMA_VERSION = "1"
 
@@ -49,7 +50,7 @@ class PhashCache:
     """
 
     def __init__(self, cache_dir: str = ".") -> None:
-        db_path = f"{cache_dir}/phash_cache.db"
+        db_path = os.path.join(cache_dir, "phash_cache.db")
         self._conn = sqlite3.connect(db_path)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
@@ -122,6 +123,25 @@ class PhashCache:
         )
         self._conn.commit()
 
+    def put_bulk(
+        self,
+        entries: Sequence[Tuple[str, str, str, Optional[int], Optional[int]]],
+    ) -> None:
+        """Insert or replace multiple cache entries in a single transaction.
+
+        Each entry is a tuple of ``(eqpid, fname, phash, image_w, image_h)``.
+        """
+        if not entries:
+            return
+        cached_at = datetime.now(timezone.utc).isoformat()
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO phash_cache "
+            "(eqpid, fname, phash, image_w, image_h, cached_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(*e, cached_at) for e in entries],
+        )
+        self._conn.commit()
+
     def get_bulk(
         self, eqpid: str, fnames: List[str]
     ) -> Dict[str, CacheEntry]:
@@ -174,7 +194,9 @@ class PhashCache:
 
     def close(self) -> None:
         """Close the underlying database connection."""
-        self._conn.close()
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None  # type: ignore[assignment]
 
     # ------------------------------------------------------------------
     # Context manager protocol
