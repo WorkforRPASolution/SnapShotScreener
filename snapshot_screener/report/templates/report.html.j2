@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnapshotScreener 분석 리포트 — {{ eqpid }}</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-card-hover: #1f2330;
+    --border: #2a2d3a;
+    --border-light: #353849;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --text-muted: #5c6072;
+    --accent: #4e8cff;
+    --accent-dim: rgba(78,140,255,0.12);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --click-dot: #ff4d6a;
+    --transition-tag: #a78bfa;
+    --session-tag: #38bdf8;
+    --screen-tag: #34d399;
+    --cluster-tag: #fb923c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  .report-header {
+    background: linear-gradient(135deg, #161822 0%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 0 40px;
+  }
+
+  .report-header .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .report-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .report-header .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .report-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .meta-chip .label {
+    color: var(--text-muted);
+  }
+
+  .meta-chip .value {
+    color: var(--text);
+    font-weight: 500;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+
+  /* Summary Cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .summary-card:hover {
+    border-color: var(--border-light);
+  }
+
+  .summary-card .card-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .summary-card .card-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: -1px;
+  }
+
+  .summary-card .card-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .highlight-green { color: var(--green); }
+  .highlight-amber { color: var(--amber); }
+  .highlight-accent { color: var(--accent); }
+  .highlight-red { color: var(--red); }
+
+  /* Session block */
+  .session-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .session-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.01);
+  }
+
+  .session-id {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--session-tag);
+  }
+
+  .session-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .session-stats span {
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+
+  .frame-sequence {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .frame-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .frame-timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+
+  .frame-time {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .frame-line {
+    width: 1px;
+    flex: 1;
+    background: var(--border);
+    margin-top: 8px;
+    min-height: 20px;
+  }
+
+  .frame-content {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .frame-content:hover {
+    border-color: var(--border-light);
+  }
+
+  .frame-img-wrap {
+    position: relative;
+    width: 320px;
+    height: 200px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #12141c;
+  }
+
+  .frame-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .click-dot {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--click-dot);
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 12px rgba(255,77,106,0.5);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .click-dot::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,77,106,0.3);
+    animation: pulse 2s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+
+  .frame-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .frame-fname {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    word-break: break-all;
+  }
+
+  .frame-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .tag-screen { background: rgba(52,211,153,0.12); color: var(--screen-tag); }
+  .tag-transition { background: rgba(167,139,250,0.12); color: var(--transition-tag); }
+  .tag-session { background: rgba(56,189,248,0.12); color: var(--session-tag); }
+  .tag-cluster { background: rgba(251,146,60,0.12); color: var(--cluster-tag); }
+
+  .frame-coord {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .frame-coord em {
+    color: var(--click-dot);
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  .frame-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .frame-score {
+    margin-top: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .frame-score strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Signals */
+  .signals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .signal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .signal-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .signal-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .signal-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: -1px;
+  }
+
+  .signal-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .signal-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .signal-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .signal-bar-fill.green { background: var(--green); }
+  .signal-bar-fill.amber { background: var(--amber); }
+  .signal-bar-fill.red { background: var(--red); }
+
+  .signal-verdict {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    display: inline-block;
+  }
+
+  .verdict-high { background: var(--green-dim); color: var(--green); }
+  .verdict-mid { background: var(--amber-dim); color: var(--amber); }
+  .verdict-low { background: var(--red-dim); color: var(--red); }
+
+  /* Sensitivity */
+  .sensitivity-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .sensitivity-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sensitivity-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .sensitivity-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Verdict */
+  .verdict-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .verdict-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+
+  .verdict-icon.positive { background: var(--green-dim); }
+  .verdict-icon.caution { background: var(--amber-dim); }
+  .verdict-icon.negative { background: var(--red-dim); }
+
+  .verdict-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .verdict-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* Empty state */
+  .empty-state {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px 32px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* Footer */
+  .report-footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 860px) {
+    .frame-row { flex-direction: column; }
+    .frame-timeline { flex-direction: row; width: auto; gap: 8px; }
+    .frame-line { width: 40px; height: 1px; min-height: auto; margin-top: 0; }
+    .frame-content { flex-direction: column; }
+    .frame-img-wrap { width: 100%; height: auto; aspect-ratio: 16/9; }
+  }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <div class="inner">
+    <h1>SnapshotScreener 분석 리포트</h1>
+    <div class="subtitle">SnapshotScreener Analysis Report</div>
+    <div class="report-meta">
+      <div class="meta-chip">
+        <span class="label">장비 ID</span>
+        <span class="value">{{ eqpid }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">분석 기간</span>
+        <span class="value">{{ date_from }} ~ {{ date_to }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">생성 일시</span>
+        <span class="value">{{ generated_at }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">SnapshotScreener</span>
+        <span class="value">{{ version }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Section 1: Summary -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">1</span> 장비 요약</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-label">총 클릭 수</div>
+        <div class="card-value">{{ "{:,}".format(total_clicks) }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">분석 일수</div>
+        <div class="card-value">{{ analysis_days }}<span class="card-unit">일</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">세션 수</div>
+        <div class="card-value">{{ "{:,}".format(session_count) }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">화면 그룹</div>
+        <div class="card-value">{{ screen_group_count }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">대표 프레임</div>
+        <div class="card-value highlight-accent">{{ representative_count }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">데이터 축소율</div>
+        <div class="card-value highlight-green">{{ "%.1f"|format(reduction_rate) }}<span class="card-unit">%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Representative Frames -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">2</span> 대표 프레임 시퀀스</h2>
+
+    {% if sessions %}
+    {% for session in sessions %}
+    <div class="session-block">
+      <div class="session-header">
+        <div class="session-id">Session {{ session.id }}</div>
+        <div class="session-stats">
+          <span>클릭 {{ session.click_count }}회</span>
+          <span>{{ session.time_range }}</span>
+          <span>대표 프레임 {{ session.frame_count }}개</span>
+        </div>
+      </div>
+      <div class="frame-sequence">
+        {% for frame in session.frames %}
+        <div class="frame-row">
+          <div class="frame-timeline">
+            <span class="frame-time">{{ frame.time }}</span>
+            {% if not loop.last %}<div class="frame-line"></div>{% endif %}
+          </div>
+          <div class="frame-content">
+            <div class="frame-img-wrap">
+              {% if frame.b64 %}
+              <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
+              <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
+              {% else %}
+              <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:12px;">이미지 없음</div>
+              {% endif %}
+            </div>
+            <div class="frame-info">
+              <div class="frame-fname">{{ frame.fname }}</div>
+              <div class="frame-tags">
+                {% for i in range(frame.tags | length) %}
+                <span class="tag {{ frame.tag_classes[i] }}">{{ frame.tags[i] }}</span>
+                {% endfor %}
+              </div>
+              <div class="frame-coord">클릭 좌표: <em>({{ frame.x }}, {{ frame.y }})</em></div>
+              <div class="frame-desc">{{ frame.desc }}</div>
+              <div class="frame-score">candidate_score: <strong>{{ frame.score }}</strong></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">대표 프레임이 선택되지 않았습니다</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 3: Pattern Screening Signals -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">3</span> 패턴 스크리닝 신호 (레이어 B)</h2>
+    <div class="signals-grid">
+      {% if screening.click_concentration is not none %}
+      <div class="signal-card">
+        <div class="signal-label">클릭 좌표 집중도</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-{{ screening.click_concentration_color }}">{{ "%.1f"|format(screening.click_concentration) }}</div>
+          <div class="signal-unit">%</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill {{ screening.click_concentration_color }}" style="width:{{ [screening.click_concentration, 100] | min }}%"></div></div>
+        <span class="signal-verdict verdict-{{ screening.click_concentration_verdict_class }}">{{ screening.click_concentration_verdict }}</span>
+      </div>
+      {% endif %}
+      {% if screening.session_cv is not none %}
+      <div class="signal-card">
+        <div class="signal-label">세션 길이 변동계수 (CV)</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-{{ screening.session_cv_color }}">{{ "%.2f"|format(screening.session_cv) }}</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill {{ screening.session_cv_color }}" style="width:{{ [screening.session_cv * 100, 100] | min }}%"></div></div>
+        <span class="signal-verdict verdict-{{ screening.session_cv_verdict_class }}">{{ screening.session_cv_verdict }}</span>
+      </div>
+      {% endif %}
+      {% if screening.sequence_similarity is not none %}
+      <div class="signal-card">
+        <div class="signal-label">세션 간 화면 시퀀스 유사도 (LCS)</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-{{ screening.sequence_similarity_color }}">{{ "%.2f"|format(screening.sequence_similarity) }}</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill {{ screening.sequence_similarity_color }}" style="width:{{ [screening.sequence_similarity * 100, 100] | min }}%"></div></div>
+        <span class="signal-verdict verdict-{{ screening.sequence_similarity_verdict_class }}">{{ screening.sequence_similarity_verdict }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Section 4: Parameter Sensitivity -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">4</span> 파라미터 민감도 분석 (레이어 C)</h2>
+    {% if sensitivity is not none %}
+    <div class="session-block">
+      <div class="session-header">
+        <div class="session-id">PHASH_SIMILAR_THRESHOLD sweep: {{ sensitivity.threshold_values }}</div>
+      </div>
+      <div style="padding:20px">
+        <table class="sensitivity-table">
+          <thead>
+            <tr>
+              <th>Threshold 쌍</th>
+              <th>대표 프레임 수</th>
+              <th>Jaccard 유사도</th>
+              <th>판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pair in sensitivity.jaccard_pairs %}
+            <tr>
+              <td>{{ pair[0] }} vs {{ pair[1] }}</td>
+              <td>{{ sensitivity.frame_counts.get(pair[0], "?") }} / {{ sensitivity.frame_counts.get(pair[1], "?") }}</td>
+              {% if pair[2] >= 0.7 %}
+              <td style="color:var(--green)">{{ "%.2f"|format(pair[2]) }}</td>
+              <td><span class="signal-verdict verdict-high">안정</span></td>
+              {% elif pair[2] >= 0.4 %}
+              <td style="color:var(--amber)">{{ "%.2f"|format(pair[2]) }}</td>
+              <td><span class="signal-verdict verdict-mid">중간</span></td>
+              {% else %}
+              <td style="color:var(--red)">{{ "%.2f"|format(pair[2]) }}</td>
+              <td><span class="signal-verdict verdict-low">불안정</span></td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div style="margin-top:16px;">
+          <div class="signal-label">최소 Jaccard 유사도</div>
+          <div class="signal-value-row">
+            <div class="signal-value highlight-green" style="font-size:24px">{{ "%.2f"|format(sensitivity.min_jaccard) }}</div>
+          </div>
+          <span class="signal-verdict {% if sensitivity.min_jaccard >= 0.7 %}verdict-high{% elif sensitivity.min_jaccard >= 0.4 %}verdict-mid{% else %}verdict-low{% endif %}">{{ sensitivity.sensitivity_verdict }}</span>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">민감도 분석이 비활성화되어 있습니다</div>
+    {% endif %}
+  </div>
+
+  <!-- Section 5: Verdict -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">5</span> 종합 판정</h2>
+    <div class="verdict-box">
+      <div class="verdict-icon {% if verdict_color == 'green' %}positive{% elif verdict_color == 'amber' %}caution{% else %}negative{% endif %}">{% if verdict_color == 'green' %}&#x2713;{% elif verdict_color == 'amber' %}&#x26A0;{% else %}&#x2717;{% endif %}</div>
+      <div class="verdict-title highlight-{{ verdict_color }}">{{ verdict }}</div>
+      <div class="verdict-desc">{{ verdict_desc }}</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="report-footer">
+  대표 스냅샷 추출기 {{ version }} &middot; 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
+</div>
+
+</body>
+</html>

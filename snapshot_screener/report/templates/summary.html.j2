@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnapshotScreener 종합 요약 리포트</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-card-hover: #1f2330;
+    --border: #2a2d3a;
+    --border-light: #353849;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --text-muted: #5c6072;
+    --accent: #4e8cff;
+    --accent-dim: rgba(78,140,255,0.12);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  .report-header {
+    background: linear-gradient(135deg, #161822 0%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 0 40px;
+  }
+
+  .report-header .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .report-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .report-header .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .report-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .meta-chip .label { color: var(--text-muted); }
+  .meta-chip .value {
+    color: var(--text);
+    font-weight: 500;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  .section { margin-bottom: 48px; }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+
+  .highlight-green { color: var(--green); }
+  .highlight-amber { color: var(--amber); }
+  .highlight-red { color: var(--red); }
+  .highlight-accent { color: var(--accent); }
+
+  /* Aggregate cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .summary-card:hover { border-color: var(--border-light); }
+
+  .summary-card .card-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .summary-card .card-value {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: -1px;
+  }
+
+  .summary-card .card-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  /* Highlight block */
+  .highlight-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--green);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .highlight-block h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+
+  .highlight-block .eqpid-list {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* Comparison table */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .comparison-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .comparison-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+  }
+
+  .comparison-table tr:last-child td { border-bottom: none; }
+
+  .comparison-table a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .comparison-table a:hover { text-decoration: underline; }
+
+  .verdict-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .verdict-badge.high { background: var(--green-dim); color: var(--green); }
+  .verdict-badge.medium { background: var(--amber-dim); color: var(--amber); }
+  .verdict-badge.low { background: var(--red-dim); color: var(--red); }
+
+  /* Footer */
+  .report-footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <div class="inner">
+    <h1>SnapshotScreener 종합 요약 리포트</h1>
+    <div class="subtitle">Multi-Equipment Summary Report</div>
+    <div class="report-meta">
+      <div class="meta-chip">
+        <span class="label">분석 장비 수</span>
+        <span class="value">{{ equipment_count }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">분석 기간</span>
+        <span class="value">{{ date_from }} ~ {{ date_to }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">생성 일시</span>
+        <span class="value">{{ generated_at }}</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">SnapshotScreener</span>
+        <span class="value">{{ version }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Section 1: Aggregate -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">1</span> 판정 요약</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-label">높음</div>
+        <div class="card-value highlight-green">{{ high_count }}<span class="card-unit">대</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">중간</div>
+        <div class="card-value highlight-amber">{{ medium_count }}<span class="card-unit">대</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">낮음</div>
+        <div class="card-value highlight-red">{{ low_count }}<span class="card-unit">대</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Highlighted equipment -->
+  {% if high_eqpids %}
+  <div class="section">
+    <h2 class="section-title"><span class="num">2</span> 패턴 가능성 높은 장비</h2>
+    <div class="highlight-block">
+      <h3>Vision AI 투입 대상 권장 ({{ high_eqpids | length }}대)</h3>
+      <div class="eqpid-list">
+        {% for eq in high_eqpids %}
+        {{ eq }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Section 3: Comparison Table -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">3</span> 장비 비교 테이블</h2>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>장비 ID</th>
+          <th>분석 일수</th>
+          <th>총 클릭</th>
+          <th>집중도</th>
+          <th>CV</th>
+          <th>유사도</th>
+          <th>판정</th>
+          <th>리포트</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparison_rows %}
+        <tr>
+          <td>{{ row.eqpid }}</td>
+          <td>{{ row.analysis_days }}</td>
+          <td>{{ "{:,}".format(row.total_clicks) }}</td>
+          <td>{% if row.click_concentration is not none %}{{ "%.1f"|format(row.click_concentration) }}%{% else %}-{% endif %}</td>
+          <td>{% if row.session_cv is not none %}{{ "%.2f"|format(row.session_cv) }}{% else %}-{% endif %}</td>
+          <td>{% if row.sequence_similarity is not none %}{{ "%.2f"|format(row.sequence_similarity) }}{% else %}-{% endif %}</td>
+          <td><span class="verdict-badge {{ row.verdict_class }}">{{ row.verdict }}</span></td>
+          <td><a href="{{ row.report_link }}">상세 리포트</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="report-footer">
+  대표 스냅샷 추출기 {{ version }} &middot; 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
+</div>
+
+</body>
+</html>
