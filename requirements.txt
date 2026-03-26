@@ -1,0 +1,7 @@
+cassandra-driver>=3.29
+Pillow
+imagehash
+scikit-learn
+numpy
+jinja2
+matplotlib

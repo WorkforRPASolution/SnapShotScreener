@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "snapshot-screener"
+version = "0.1.0"
+description = "Automated snapshot screening and analysis tool"
+requires-python = ">=3.10"
+dependencies = [
+    "cassandra-driver>=3.29",
+    "Pillow",
+    "imagehash",
+    "scikit-learn",
+    "numpy",
+    "jinja2",
+    "matplotlib",
+]
+
+[project.scripts]
+snapshot-screener = "snapshot_screener.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["snapshot_screener*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
