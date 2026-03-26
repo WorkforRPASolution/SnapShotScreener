@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnapshotScreener 분석 리포트</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-card-hover: #1f2330;
+    --border: #2a2d3a;
+    --border-light: #353849;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --text-muted: #5c6072;
+    --accent: #4e8cff;
+    --accent-dim: rgba(78,140,255,0.12);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --click-dot: #ff4d6a;
+    --transition-tag: #a78bfa;
+    --session-tag: #38bdf8;
+    --screen-tag: #34d399;
+    --cluster-tag: #fb923c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  .report-header {
+    background: linear-gradient(135deg, #161822 0%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 0 40px;
+  }
+
+  .report-header .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  .report-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .report-header .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .report-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .meta-chip .label {
+    color: var(--text-muted);
+  }
+
+  .meta-chip .value {
+    color: var(--text);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Summary Cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .summary-card:hover {
+    border-color: var(--border-light);
+  }
+
+  .summary-card .card-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .summary-card .card-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -1px;
+  }
+
+  .summary-card .card-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .highlight-green { color: var(--green); }
+  .highlight-amber { color: var(--amber); }
+  .highlight-accent { color: var(--accent); }
+  .highlight-red { color: var(--red); }
+
+  /* Session block */
+  .session-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .session-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.01);
+  }
+
+  .session-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--session-tag);
+  }
+
+  .session-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .session-stats span {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .frame-sequence {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .frame-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .frame-timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 60px;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+
+  .frame-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .frame-line {
+    width: 1px;
+    flex: 1;
+    background: var(--border);
+    margin-top: 8px;
+    min-height: 20px;
+  }
+
+  .frame-content {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .frame-content:hover {
+    border-color: var(--border-light);
+  }
+
+  .frame-img-wrap {
+    position: relative;
+    width: 320px;
+    height: 200px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #12141c;
+  }
+
+  .frame-img-wrap canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .click-dot {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--click-dot);
+    border: 2px solid #fff;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 12px rgba(255,77,106,0.5);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .click-dot::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,77,106,0.3);
+    animation: pulse 2s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+
+  .frame-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .frame-fname {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    word-break: break-all;
+  }
+
+  .frame-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .tag-screen { background: rgba(52,211,153,0.12); color: var(--screen-tag); }
+  .tag-transition { background: rgba(167,139,250,0.12); color: var(--transition-tag); }
+  .tag-session { background: rgba(56,189,248,0.12); color: var(--session-tag); }
+  .tag-cluster { background: rgba(251,146,60,0.12); color: var(--cluster-tag); }
+
+  .frame-coord {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .frame-coord em {
+    color: var(--click-dot);
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  .frame-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .frame-score {
+    margin-top: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .frame-score strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Signals */
+  .signals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .signal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .signal-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .signal-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .signal-value {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -1px;
+  }
+
+  .signal-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .signal-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .signal-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .signal-bar-fill.green { background: var(--green); }
+  .signal-bar-fill.amber { background: var(--amber); }
+  .signal-bar-fill.red { background: var(--red); }
+
+  .signal-verdict {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    display: inline-block;
+  }
+
+  .verdict-high { background: var(--green-dim); color: var(--green); }
+  .verdict-mid { background: var(--amber-dim); color: var(--amber); }
+  .verdict-low { background: var(--red-dim); color: var(--red); }
+
+  /* Sensitivity */
+  .sensitivity-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .sensitivity-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sensitivity-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .sensitivity-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Verdict */
+  .verdict-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .verdict-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+
+  .verdict-icon.positive { background: var(--green-dim); }
+  .verdict-icon.caution { background: var(--amber-dim); }
+
+  .verdict-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .verdict-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* Footer */
+  .report-footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 860px) {
+    .frame-row { flex-direction: column; }
+    .frame-timeline { flex-direction: row; width: auto; gap: 8px; }
+    .frame-line { width: 40px; height: 1px; min-height: auto; margin-top: 0; }
+    .frame-content { flex-direction: column; }
+    .frame-img-wrap { width: 100%; height: auto; aspect-ratio: 16/10; }
+  }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <div class="inner">
+    <h1>SnapshotScreener 분석 리포트</h1>
+    <div class="subtitle">SnapshotScreener Analysis Report</div>
+    <div class="report-meta">
+      <div class="meta-chip">
+        <span class="label">장비 ID</span>
+        <span class="value">EQ-2471</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">분석 기간</span>
+        <span class="value">2026-03-11 ~ 2026-03-25</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">생성 일시</span>
+        <span class="value">2026-03-25 14:32:07</span>
+      </div>
+      <div class="meta-chip">
+        <span class="label">SnapshotScreener</span>
+        <span class="value">v0.1-pilot</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Section 1: Summary -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">1</span> 장비 요약</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-label">총 클릭 수</div>
+        <div class="card-value">42,847</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">분석 일수</div>
+        <div class="card-value">14<span class="card-unit">일</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">세션 수</div>
+        <div class="card-value">127</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">화면 그룹</div>
+        <div class="card-value">18</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">대표 프레임</div>
+        <div class="card-value highlight-accent">23</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">데이터 축소율</div>
+        <div class="card-value highlight-green">99.9<span class="card-unit">%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Representative Frames -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">2</span> 대표 프레임 시퀀스</h2>
+
+    <!-- Session 1 -->
+    <div class="session-block">
+      <div class="session-header">
+        <div class="session-id">Session EQ-2471_S0001</div>
+        <div class="session-stats">
+          <span>클릭 312회</span>
+          <span>09:01 ~ 10:47</span>
+          <span>대표 프레임 4개</span>
+        </div>
+      </div>
+      <div class="frame-sequence" id="session-1-frames"></div>
+    </div>
+
+    <!-- Session 2 -->
+    <div class="session-block">
+      <div class="session-header">
+        <div class="session-id">Session EQ-2471_S0002</div>
+        <div class="session-stats">
+          <span>클릭 287회</span>
+          <span>11:02 ~ 12:15</span>
+          <span>대표 프레임 3개</span>
+        </div>
+      </div>
+      <div class="frame-sequence" id="session-2-frames"></div>
+    </div>
+  </div>
+
+  <!-- Section 3: Pattern Screening Signals -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">3</span> 패턴 스크리닝 신호 (레이어 B)</h2>
+    <div class="signals-grid">
+      <div class="signal-card">
+        <div class="signal-label">클릭 좌표 집중도</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-green">78.3</div>
+          <div class="signal-unit">%</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill green" style="width:78.3%"></div></div>
+        <span class="signal-verdict verdict-high">패턴 가능성 높음 (&gt; 70%)</span>
+      </div>
+      <div class="signal-card">
+        <div class="signal-label">세션 길이 변동계수 (CV)</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-green">0.24</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill green" style="width:24%"></div></div>
+        <span class="signal-verdict verdict-high">세션 구조 일정 (&lt; 0.3)</span>
+      </div>
+      <div class="signal-card">
+        <div class="signal-label">세션 간 화면 시퀀스 유사도 (LCS)</div>
+        <div class="signal-value-row">
+          <div class="signal-value highlight-amber">0.63</div>
+        </div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill amber" style="width:63%"></div></div>
+        <span class="signal-verdict verdict-mid">중간 수준 (0.5 ~ 0.8)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Parameter Sensitivity (Layer C) -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">4</span> 파라미터 민감도 분석 (레이어 C)</h2>
+    <div class="session-block">
+      <div class="session-header">
+        <div class="session-id">PHASH_SIMILAR_THRESHOLD sweep: [3, 4, 5, 6]</div>
+      </div>
+      <div style="padding:20px">
+        <table class="sensitivity-table">
+          <thead>
+            <tr>
+              <th>Threshold 쌍</th>
+              <th>대표 프레임 수</th>
+              <th>Jaccard 유사도</th>
+              <th>판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>3 vs 4</td>
+              <td>25 / 23</td>
+              <td style="color:var(--green)">0.87</td>
+              <td><span class="signal-verdict verdict-high">안정</span></td>
+            </tr>
+            <tr>
+              <td>4 vs 5</td>
+              <td>23 / 21</td>
+              <td style="color:var(--green)">0.82</td>
+              <td><span class="signal-verdict verdict-high">안정</span></td>
+            </tr>
+            <tr>
+              <td>5 vs 6</td>
+              <td>21 / 17</td>
+              <td style="color:var(--amber)">0.68</td>
+              <td><span class="signal-verdict verdict-mid">중간</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:16px;">
+          <div class="signal-label">평균 Jaccard 유사도</div>
+          <div class="signal-value-row">
+            <div class="signal-value highlight-green" style="font-size:24px">0.79</div>
+          </div>
+          <span class="signal-verdict verdict-high">파라미터에 둔감 — 구조 명확</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Verdict -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">5</span> 종합 판정</h2>
+    <div class="verdict-box">
+      <div class="verdict-icon positive">✓</div>
+      <div class="verdict-title highlight-green">패턴 존재 가능성 — 높음</div>
+      <div class="verdict-desc">
+        클릭 좌표 집중도(78.3%)와 세션 길이 일관성(CV 0.24)이 모두 양호하며,
+        파라미터 민감도 분석에서 구조가 명확한 것으로 확인됨.<br>
+        Vision AI 투입 대상으로 권장.
+        <br><br>
+        <span style="color:var(--amber)">⚠ 주의:</span>
+        세션 간 화면 시퀀스 유사도(0.63)가 중간 수준이므로,
+        일부 세션에서 변형 패턴 또는 예외 흐름이 포함될 수 있음.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="report-footer">
+  대표 스냅샷 추출기 v0.1-pilot · 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
+</div>
+
+<script>
+// Mock UI screen generator
+function drawMockScreen(canvas, screenType, clickX, clickY) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = 640;
+  const h = canvas.height = 400;
+
+  // Background
+  const bgColors = {
+    main: '#e8ecf1', form: '#eef1f5', table: '#f0f2f5', dialog: '#e5e9ee'
+  };
+  ctx.fillStyle = bgColors[screenType] || '#e8ecf1';
+  ctx.fillRect(0, 0, w, h);
+
+  // Title bar
+  ctx.fillStyle = '#2c3e6b';
+  ctx.fillRect(0, 0, w, 36);
+  ctx.fillStyle = '#fff';
+  ctx.font = '13px sans-serif';
+  const titles = {
+    main: 'Equipment Control Panel — Main',
+    form: 'Recipe Parameter Input',
+    table: 'Production Log Viewer',
+    dialog: 'Confirmation Dialog'
+  };
+  ctx.fillText(titles[screenType] || 'Equipment UI', 14, 24);
+
+  // Window controls
+  ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(w-50,18,6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffd93d'; ctx.beginPath(); ctx.arc(w-32,18,6,0,Math.PI*2); ctx.fill();
+
+  if (screenType === 'main') {
+    // Sidebar
+    ctx.fillStyle = '#344a7a';
+    ctx.fillRect(0, 36, 150, h-36);
+    const menuItems = ['Dashboard', 'Recipe', 'Process', 'History', 'Settings'];
+    ctx.font = '12px sans-serif';
+    menuItems.forEach((item, i) => {
+      if (i === 0) { ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(0, 44+i*36, 150, 36); }
+      ctx.fillStyle = i===0 ? '#fff' : 'rgba(255,255,255,0.6)';
+      ctx.fillText(item, 20, 68+i*36);
+    });
+    // Content cards
+    for (let r=0; r<2; r++) {
+      for (let c=0; c<3; c++) {
+        const cx = 170 + c*155, cy = 55 + r*160;
+        ctx.fillStyle = '#fff';
+        roundRect(ctx, cx, cy, 140, 140, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#d1d5de'; ctx.lineWidth = 1;
+        roundRect(ctx, cx, cy, 140, 140, 6);
+        ctx.stroke();
+        ctx.fillStyle = '#8895a7';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(['Temp', 'Pressure', 'Flow', 'RPM', 'Voltage', 'Status'][r*3+c], cx+12, cy+24);
+        ctx.fillStyle = '#2c3e6b';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(['342.1°', '1.82', '24.7', '3600', '220V', 'RUN'][r*3+c], cx+12, cy+64);
+      }
+    }
+  } else if (screenType === 'form') {
+    const fields = ['Recipe ID', 'Temperature (°C)', 'Pressure (atm)', 'Duration (sec)', 'Gas Flow (sccm)'];
+    fields.forEach((f, i) => {
+      const fy = 60 + i*58;
+      ctx.fillStyle = '#5c6a80'; ctx.font = '12px sans-serif';
+      ctx.fillText(f, 40, fy);
+      ctx.fillStyle = '#fff';
+      roundRect(ctx, 40, fy+6, 300, 32, 4); ctx.fill();
+      ctx.strokeStyle = '#c5cad4'; ctx.lineWidth = 1;
+      roundRect(ctx, 40, fy+6, 300, 32, 4); ctx.stroke();
+      ctx.fillStyle = '#aab2bf'; ctx.font = '12px sans-serif';
+      ctx.fillText(['RCP-0042', '350', '1.85', '120', '200'][i], 52, fy+27);
+    });
+    // Buttons
+    ctx.fillStyle = '#2c6bed';
+    roundRect(ctx, 40, 356, 100, 34, 6); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif'; ctx.fillText('저장', 72, 378);
+    ctx.fillStyle = '#e2e5ea';
+    roundRect(ctx, 152, 356, 100, 34, 6); ctx.fill();
+    ctx.fillStyle = '#5c6a80'; ctx.fillText('취소', 184, 378);
+  } else if (screenType === 'table') {
+    // Table header
+    ctx.fillStyle = '#f5f7fa';
+    ctx.fillRect(30, 55, 580, 32);
+    ctx.strokeStyle = '#d1d5de'; ctx.lineWidth = 1;
+    ctx.strokeRect(30, 55, 580, 32);
+    const cols = ['Time', 'Lot ID', 'Recipe', 'Result', 'Duration'];
+    const colX = [40, 150, 270, 390, 510];
+    ctx.fillStyle = '#5c6a80'; ctx.font = 'bold 11px sans-serif';
+    cols.forEach((c, i) => ctx.fillText(c, colX[i], 76));
+    // Rows
+    for (let r=0; r<8; r++) {
+      const ry = 87 + r*36;
+      ctx.fillStyle = r%2===0 ? '#fff' : '#fafbfc';
+      ctx.fillRect(30, ry, 580, 36);
+      ctx.strokeStyle = '#e8eaef'; ctx.strokeRect(30, ry, 580, 36);
+      ctx.fillStyle = '#3d4a5c'; ctx.font = '11px sans-serif';
+      ctx.fillText(`09:${String(r*7+1).padStart(2,'0')}`, colX[0], ry+22);
+      ctx.fillText(`LOT-${2400+r}`, colX[1], ry+22);
+      ctx.fillText(`RCP-004${r%3}`, colX[2], ry+22);
+      ctx.fillStyle = r%5===3 ? '#e74c3c' : '#27ae60';
+      ctx.fillText(r%5===3 ? 'FAIL' : 'PASS', colX[3], ry+22);
+      ctx.fillStyle = '#3d4a5c';
+      ctx.fillText(`${110+r*5}s`, colX[4], ry+22);
+    }
+  } else if (screenType === 'dialog') {
+    // Overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, 36, w, h-36);
+    // Dialog box
+    ctx.fillStyle = '#fff';
+    roundRect(ctx, 160, 120, 320, 180, 10); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#2c3e6b'; ctx.font = 'bold 15px sans-serif';
+    ctx.fillText('공정 시작 확인', 200, 164);
+    ctx.fillStyle = '#5c6a80'; ctx.font = '13px sans-serif';
+    ctx.fillText('Recipe RCP-0042로 공정을', 200, 200);
+    ctx.fillText('시작하시겠습니까?', 200, 220);
+    // Buttons
+    ctx.fillStyle = '#2c6bed';
+    roundRect(ctx, 200, 250, 90, 34, 6); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '13px sans-serif'; ctx.fillText('확인', 232, 272);
+    ctx.fillStyle = '#e2e5ea';
+    roundRect(ctx, 310, 250, 90, 34, 6); ctx.fill();
+    ctx.fillStyle = '#5c6a80'; ctx.fillText('취소', 342, 272);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function createFrameRow(data) {
+  const row = document.createElement('div');
+  row.className = 'frame-row';
+
+  // Timeline
+  const timeline = document.createElement('div');
+  timeline.className = 'frame-timeline';
+  timeline.innerHTML = `<span class="frame-time">${data.time}</span><div class="frame-line"></div>`;
+
+  // Content
+  const content = document.createElement('div');
+  content.className = 'frame-content';
+
+  // Image
+  const imgWrap = document.createElement('div');
+  imgWrap.className = 'frame-img-wrap';
+  const canvas = document.createElement('canvas');
+  imgWrap.appendChild(canvas);
+
+  // Click dot
+  const dot = document.createElement('div');
+  dot.className = 'click-dot';
+  dot.style.left = (data.clickX / 640 * 100) + '%';
+  dot.style.top = (data.clickY / 400 * 100) + '%';
+  imgWrap.appendChild(dot);
+
+  drawMockScreen(canvas, data.screenType, data.clickX, data.clickY);
+
+  // Info
+  const info = document.createElement('div');
+  info.className = 'frame-info';
+
+  let tagsHTML = '';
+  data.tags.forEach(t => {
+    const cls = { '새 화면':'tag-screen', '전이점':'tag-transition', '세션 시작':'tag-session', '세션 종료':'tag-session', '새 클러스터':'tag-cluster' };
+    tagsHTML += `<span class="tag ${cls[t] || 'tag-screen'}">${t}</span>`;
+  });
+
+  info.innerHTML = `
+    <div class="frame-fname">${data.fname}</div>
+    <div class="frame-tags">${tagsHTML}</div>
+    <div class="frame-coord">클릭 좌표: <em>(${data.x}, ${data.y})</em></div>
+    <div class="frame-desc">${data.desc}</div>
+    <div class="frame-score">candidate_score: <strong>${data.score}</strong></div>
+  `;
+
+  content.appendChild(imgWrap);
+  content.appendChild(info);
+  row.appendChild(timeline);
+  row.appendChild(content);
+  return row;
+}
+
+// Session 1 frames
+const session1Data = [
+  {
+    time: '09:01:12',
+    fname: '1742698872000_285_124.png',
+    screenType: 'main',
+    clickX: 285, clickY: 124, x: 285, y: 124,
+    tags: ['세션 시작', '새 화면'],
+    desc: '메인 대시보드 진입 — 장비 상태 모니터링 화면에서 Recipe 메뉴 영역 클릭',
+    score: 7
+  },
+  {
+    time: '09:04:37',
+    fname: '1742699077000_180_246.png',
+    screenType: 'form',
+    clickX: 180, clickY: 246, x: 180, y: 246,
+    tags: ['새 화면', '전이점'],
+    desc: 'Recipe 파라미터 입력 폼 전환 — Duration 필드 영역 클릭',
+    score: 7
+  },
+  {
+    time: '09:07:52',
+    fname: '1742699272000_242_268.png',
+    screenType: 'dialog',
+    clickX: 242, clickY: 268, x: 242, y: 268,
+    tags: ['새 화면', '전이점', '새 클러스터'],
+    desc: '공정 시작 확인 다이얼로그 — 확인 버튼 클릭',
+    score: 9
+  },
+  {
+    time: '09:48:11',
+    fname: '1742701691000_420_198.png',
+    screenType: 'table',
+    clickX: 420, clickY: 198, x: 420, y: 198,
+    tags: ['새 화면', '전이점'],
+    desc: '공정 완료 후 생산 이력 테이블 화면 전환 — Result 컬럼 영역 클릭',
+    score: 7
+  }
+];
+
+const session2Data = [
+  {
+    time: '11:02:44',
+    fname: '1742706164000_285_124.png',
+    screenType: 'main',
+    clickX: 80, clickY: 108, x: 80, y: 108,
+    tags: ['세션 시작', '새 화면'],
+    desc: '새 세션 시작 — 메인 대시보드에서 Process 메뉴 영역 클릭',
+    score: 7
+  },
+  {
+    time: '11:08:19',
+    fname: '1742706499000_195_178.png',
+    screenType: 'form',
+    clickX: 195, clickY: 178, x: 195, y: 178,
+    tags: ['새 화면', '전이점'],
+    desc: 'Recipe 파라미터 입력 폼 — Temperature 필드 클릭 (이전 세션과 동일 흐름)',
+    score: 7
+  },
+  {
+    time: '11:12:05',
+    fname: '1742706725000_242_268.png',
+    screenType: 'dialog',
+    clickX: 242, clickY: 268, x: 242, y: 268,
+    tags: ['새 화면', '전이점'],
+    desc: '공정 시작 확인 다이얼로그 — 확인 버튼 (이전 세션과 동일 좌표)',
+    score: 7
+  }
+];
+
+const s1Container = document.getElementById('session-1-frames');
+session1Data.forEach(d => s1Container.appendChild(createFrameRow(d)));
+
+const s2Container = document.getElementById('session-2-frames');
+session2Data.forEach(d => s2Container.appendChild(createFrameRow(d)));
+</script>
+</body>
+</html>
