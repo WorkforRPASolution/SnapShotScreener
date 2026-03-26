@@ -1,0 +1,3 @@
+include requirements.txt
+include requirements-dev.txt
+recursive-include snapshot_screener/report/templates *.j2
