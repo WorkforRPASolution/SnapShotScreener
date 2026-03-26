@@ -14,13 +14,20 @@ from cassandra import (
 )
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.io.asyncorereactor import AsyncoreConnection
+try:
+    from cassandra.io.asyncorereactor import AsyncoreConnection as _DefaultConnection
+except Exception:
+    # asyncore removed in Python 3.12+; fall back to libev
+    from cassandra.io.libevreactor import LibevConnection as _DefaultConnection
 from cassandra.policies import (
     DCAwareRoundRobinPolicy,
     HostDistance,
     TokenAwarePolicy,
 )
-from cassandra.pool import PoolingOptions
+try:
+    from cassandra.pool import PoolingOptions
+except ImportError:
+    PoolingOptions = None  # type: ignore[assignment,misc]
 from cassandra.query import ConsistencyLevel
 
 from snapshot_screener.config import ScreenerConfig
@@ -59,13 +66,6 @@ class CassandraClient:
     def __init__(self, config: ScreenerConfig) -> None:
         self._config = config
 
-        # Pooling — keep connections minimal
-        opts = PoolingOptions()
-        opts.set_core_connections_per_host(HostDistance.LOCAL, 1)
-        opts.set_max_connections_per_host(HostDistance.LOCAL, 1)
-        opts.set_core_connections_per_host(HostDistance.REMOTE, 0)
-        opts.set_max_connections_per_host(HostDistance.REMOTE, 0)
-
         # Auth (optional)
         auth_provider = None
         if config.db_username and config.db_password:
@@ -74,16 +74,26 @@ class CassandraClient:
                 password=config.db_password,
             )
 
-        # Cluster (not connected yet — deferred to __enter__)
-        self._cluster = Cluster(
+        # Build Cluster kwargs — pooling_options removed in newer drivers
+        cluster_kwargs: dict = dict(
             contact_points=[config.db_host],
             port=config.db_port,
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
-            pooling_options=opts,
             auth_provider=auth_provider,
             connect_timeout=10,
-            connection_class=AsyncoreConnection,
+            connection_class=_DefaultConnection,
         )
+
+        if PoolingOptions is not None:
+            opts = PoolingOptions()
+            opts.set_core_connections_per_host(HostDistance.LOCAL, 1)
+            opts.set_max_connections_per_host(HostDistance.LOCAL, 1)
+            opts.set_core_connections_per_host(HostDistance.REMOTE, 0)
+            opts.set_max_connections_per_host(HostDistance.REMOTE, 0)
+            cluster_kwargs["pooling_options"] = opts
+
+        # Cluster (not connected yet — deferred to __enter__)
+        self._cluster = Cluster(**cluster_kwargs)
 
         self._session = None
         self._prep_fnames = None
