@@ -50,6 +50,9 @@ class ScreenerConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
+        if not self.eqpids:
+            raise ValueError("eqpids must not be empty")
+
         if self.date_from > self.date_to:
             raise ValueError(
                 f"date_from ({self.date_from}) must be <= date_to ({self.date_to})"

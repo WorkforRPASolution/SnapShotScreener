@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple, Any
 
 
-@dataclass
+@dataclass(slots=True)
 class SnapshotMeta:
     """Metadata for a single snapshot image."""
 
