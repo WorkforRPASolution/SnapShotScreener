@@ -289,7 +289,7 @@ class TestParseArgs:
             "--screen-height", "1440",
             "--selector", "scored",
             "--sensitivity-sweep",
-            "--fname-pattern", "xy_ts",
+            "--fname-pattern", r"(?P<ts>\d+)_\[(?P<x>\d+)\]\[(?P<y>\d+)\]\.png",
             "--cache-dir", "/tmp/cache",
             "--output-dir", "/tmp/output",
             "--invalidate-cache",
@@ -311,7 +311,7 @@ class TestParseArgs:
         assert args.screen_height == 1440
         assert args.selector == "scored"
         assert args.sensitivity_sweep is True
-        assert args.fname_pattern == "xy_ts"
+        assert args.fname_pattern == r"(?P<ts>\d+)_\[(?P<x>\d+)\]\[(?P<y>\d+)\]\.png"
         assert args.cache_dir == "/tmp/cache"
         assert args.output_dir == "/tmp/output"
         assert args.invalidate_cache is True

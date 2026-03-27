@@ -73,12 +73,12 @@ class TestCollectMetadata:
         mock_client.query_fnames.side_effect = [
             # Day 2026-03-13: two files, second has earlier ts
             [
-                "500_300_1710300000000.png",  # ts = 1710300000000
-                "100_200_1710200000000.png",  # ts = 1710200000000
+                "1710300000000_[500][300].png",  # ts = 1710300000000
+                "1710200000000_[100][200].png",  # ts = 1710200000000
             ],
             # Day 2026-03-14: one file with ts between the two above
             [
-                "400_250_1710250000000.png",  # ts = 1710250000000
+                "1710250000000_[400][250].png",  # ts = 1710250000000
             ],
         ]
 
@@ -92,7 +92,7 @@ class TestCollectMetadata:
 
         # Verify fields
         assert result[0].eqpid == "EQ-2471"
-        assert result[0].fname == "100_200_1710200000000.png"
+        assert result[0].fname == "1710200000000_[100][200].png"
         assert result[0].x == 100
         assert result[0].y == 200
 
@@ -105,18 +105,18 @@ class TestCollectMetadata:
 
         mock_client = MagicMock()
         mock_client.query_fnames.return_value = [
-            "100_200_1710000000000.png",  # valid
+            "1710000000000_[100][200].png",  # valid
             "bad_filename.txt",  # invalid
-            "no_match.png",  # invalid (only 2 fields)
-            "300_400_1710000001000.png",  # valid
+            "no_match.png",  # invalid
+            "1710000001000_[300][400].png",  # valid
         ]
 
         result = collect_metadata(mock_client, "EQ-2471", config)
 
         assert len(result) == 2
         fnames = [m.fname for m in result]
-        assert "100_200_1710000000000.png" in fnames
-        assert "300_400_1710000001000.png" in fnames
+        assert "1710000000000_[100][200].png" in fnames
+        assert "1710000001000_[300][400].png" in fnames
 
     def test_query_failure_skips_day(self) -> None:
         """If query_fnames raises, that day is skipped."""
@@ -127,9 +127,9 @@ class TestCollectMetadata:
 
         mock_client = MagicMock()
         mock_client.query_fnames.side_effect = [
-            ["100_200_1710000000000.png"],  # day 13 OK
+            ["1710000000000_[100][200].png"],  # day 13 OK
             RuntimeError("Cassandra timeout"),  # day 14 fails
-            ["300_400_1710000002000.png"],  # day 15 OK
+            ["1710000002000_[300][400].png"],  # day 15 OK
         ]
 
         result = collect_metadata(mock_client, "EQ-2471", config)

@@ -237,7 +237,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--fname-pattern",
         type=str,
         default="auto",
-        help="파일명 패턴 (auto|xy_ts|ts_xy|custom regex, 기본값: auto)",
+        help="파일명 패턴 (auto 또는 커스텀 정규식, 기본값: auto)",
     )
 
     # ---- Optional: Cache/Output ----
