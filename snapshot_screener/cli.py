@@ -366,14 +366,22 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     if not db_host:
         raise ValueError("Cassandra 호스트가 지정되지 않았습니다 (--db-host 또는 config의 db_host 필요)")
 
+    db_keyspace = cfg.get("db_keyspace")
+    if not db_keyspace:
+        raise ValueError("Cassandra 키스페이스가 지정되지 않았습니다 (--db-keyspace 또는 config의 db_keyspace 필요)")
+
+    db_table = cfg.get("db_table")
+    if not db_table:
+        raise ValueError("Cassandra 테이블이 지정되지 않았습니다 (--db-table 또는 config의 db_table 필요)")
+
     return ScreenerConfig(
         eqpids=eqpids,
         date_from=date_from,
         date_to=date_to,
         db_host=db_host,
         db_port=cfg.get("db_port", 9042),
-        db_keyspace=cfg.get("db_keyspace", ""),
-        db_table=cfg.get("db_table", ""),
+        db_keyspace=db_keyspace,
+        db_table=db_table,
         db_username=cfg.get("db_username"),
         db_password=db_password,
         read_delay_ms=cfg.get("read_delay_ms", 200),

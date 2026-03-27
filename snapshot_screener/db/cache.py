@@ -142,6 +142,9 @@ class PhashCache:
         )
         self._conn.commit()
 
+    # SQLite variable limit (safe for all versions)
+    _BATCH_SIZE = 900
+
     def get_bulk(
         self, eqpid: str, fnames: List[str]
     ) -> Dict[str, CacheEntry]:
@@ -149,24 +152,30 @@ class PhashCache:
 
         Returns a dict keyed by ``fname`` containing only the entries that
         were found in the cache (misses are simply omitted).
+
+        Queries are batched to stay within SQLite's variable limit.
         """
         if not fnames:
             return {}
 
-        placeholders = ",".join("?" for _ in fnames)
-        cur = self._conn.execute(
-            f"SELECT fname, phash, image_w, image_h, cached_at "
-            f"FROM phash_cache WHERE eqpid = ? AND fname IN ({placeholders})",
-            [eqpid, *fnames],
-        )
         results: Dict[str, CacheEntry] = {}
-        for row in cur.fetchall():
-            results[row[0]] = CacheEntry(
-                phash=row[1],
-                image_w=row[2],
-                image_h=row[3],
-                cached_at=row[4],
+
+        for start in range(0, len(fnames), self._BATCH_SIZE):
+            batch = fnames[start : start + self._BATCH_SIZE]
+            placeholders = ",".join("?" for _ in batch)
+            cur = self._conn.execute(
+                f"SELECT fname, phash, image_w, image_h, cached_at "
+                f"FROM phash_cache WHERE eqpid = ? AND fname IN ({placeholders})",
+                [eqpid, *batch],
             )
+            for row in cur.fetchall():
+                results[row[0]] = CacheEntry(
+                    phash=row[1],
+                    image_w=row[2],
+                    image_h=row[3],
+                    cached_at=row[4],
+                )
+
         return results
 
     def invalidate(self, eqpid: Optional[str] = None) -> int:

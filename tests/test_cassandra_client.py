@@ -267,7 +267,7 @@ class TestContextManager:
         mock_cluster.connect.return_value = mock_session
         client._cluster = mock_cluster
 
-        with pytest.raises(ConnectionError, match="health-check failed"):
+        with pytest.raises(ConnectionError, match="health-check 실패"):
             client.__enter__()
 
         # Cluster should be shut down on failure

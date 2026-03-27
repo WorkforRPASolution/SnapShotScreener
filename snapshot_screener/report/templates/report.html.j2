@@ -779,10 +779,10 @@
       <div class="signal-card">
         <div class="signal-label">클릭 좌표 집중도</div>
         <div class="signal-value-row">
-          <div class="signal-value highlight-{{ screening.click_concentration_color }}">{{ "%.1f"|format(screening.click_concentration) }}</div>
+          <div class="signal-value highlight-{{ screening.click_concentration_color }}">{{ "%.1f"|format(screening.click_concentration * 100) }}</div>
           <div class="signal-unit">%</div>
         </div>
-        <div class="signal-bar-bg"><div class="signal-bar-fill {{ screening.click_concentration_color }}" style="width:{{ [screening.click_concentration, 100] | min }}%"></div></div>
+        <div class="signal-bar-bg"><div class="signal-bar-fill {{ screening.click_concentration_color }}" style="width:{{ [screening.click_concentration * 100, 100] | min }}%"></div></div>
         <span class="signal-verdict verdict-{{ screening.click_concentration_verdict_class }}">{{ screening.click_concentration_verdict }}</span>
       </div>
       {% endif %}

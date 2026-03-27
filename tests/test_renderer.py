@@ -83,7 +83,7 @@ def _make_screening_result(
 ) -> ScreeningResult:
     """Create a ScreeningResult for testing."""
     return ScreeningResult(
-        click_concentration=78.3,
+        click_concentration=0.783,
         click_concentration_level="high",
         session_cv=0.24,
         session_cv_level="high",
@@ -358,7 +358,7 @@ class TestSummaryRenderer:
                 all_features=[],
                 representative_features=[],
                 screening=ScreeningResult(
-                    click_concentration=35.0,
+                    click_concentration=0.35,
                     click_concentration_level="low",
                     session_cv=0.8,
                     session_cv_level="low",

@@ -317,7 +317,7 @@ def render_report(
     parts: List[str] = []
     s = result.screening
     if s.click_concentration is not None:
-        parts.append(f"클릭 좌표 집중도 {s.click_concentration:.1f}%")
+        parts.append(f"클릭 좌표 집중도 {s.click_concentration * 100:.1f}%")
     if s.session_cv is not None:
         parts.append(f"세션 길이 CV {s.session_cv:.2f}")
     if s.sequence_similarity is not None:

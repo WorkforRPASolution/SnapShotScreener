@@ -12,9 +12,10 @@ from __future__ import annotations
 import re
 from typing import Optional, Tuple
 
-# Pre-compiled pattern: three groups of digits separated by underscores,
-# ending in .png
-_THREE_FIELD_RE = re.compile(r"^(\d+)_(\d+)_(\d+)\.png$")
+# Pre-compiled pattern: three groups of digits (optionally wrapped in brackets)
+# separated by underscores, ending in .png
+# Supports: 123_456_170000.png  and  170000_[123]_[456].png
+_THREE_FIELD_RE = re.compile(r"^(\d+)_\[?(\d+)\]?_\[?(\d+)\]?\.png$")
 
 
 class FnameParser:

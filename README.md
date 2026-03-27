@@ -117,14 +117,17 @@ pip install -e .
 Python이 설치되지 않은 환경에서 실행해야 하는 경우, 단일 exe 파일로 빌드할 수 있다.
 
 ```bash
-# 개발 의존성 설치
+# 런타임 + 개발 의존성 모두 설치
+pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
-# 단일 exe 빌드
-pyinstaller --onefile --name snapshot-screener snapshot_screener/__main__.py
+# 단일 exe 빌드 (설정은 snapshot_screener.spec에 정의됨)
+pyinstaller snapshot_screener.spec
 ```
 
-빌드된 파일은 `dist/snapshot-screener` (또는 `dist/snapshot-screener.exe`)에 생성된다.
+빌드된 파일은 `dist/snapshot-screener` (또는 `dist/snapshot-screener.exe`)에 생성된다. 빌드 시간은 수 분 소요될 수 있다 (Python 런타임 + 전체 라이브러리를 단일 파일로 번들링).
+
+> **참고**: `pip install -e .`로 설치한 경우 `requirements.txt` 설치를 생략할 수 있다. 빌드 설정(hidden imports, excludes 등)은 `snapshot_screener.spec` 파일에서 관리한다.
 
 ### 의존 라이브러리
 
