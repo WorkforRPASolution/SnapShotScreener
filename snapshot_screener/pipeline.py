@@ -212,19 +212,25 @@ def _build_json_export(result: AnalysisResult, config: "ScreenerConfig") -> Dict
     """Build a machine-readable JSON export of the analysis result."""
     s = result.screening
 
+    def _native(v: Any) -> Any:
+        """Convert numpy types to native Python for JSON serialization."""
+        if hasattr(v, 'item'):
+            return v.item()
+        return v
+
     representative_frames = []
     for f in result.representative_features:
         representative_frames.append({
             "fname": f.fname,
             "timestamp_ms": f.timestamp_ms,
-            "x": f.x,
-            "y": f.y,
+            "x": _native(f.x),
+            "y": _native(f.y),
             "session_id": f.session_id,
             "screen_group_id": f.screen_group_id,
-            "click_cluster_id": f.click_cluster_id,
-            "is_transition_point": f.is_transition_point,
-            "candidate_score": f.candidate_score,
-            "candidate_flags": f.candidate_flags,
+            "click_cluster_id": _native(f.click_cluster_id),
+            "is_transition_point": bool(f.is_transition_point),
+            "candidate_score": _native(f.candidate_score),
+            "candidate_flags": list(f.candidate_flags),
         })
 
     return {
@@ -241,11 +247,11 @@ def _build_json_export(result: AnalysisResult, config: "ScreenerConfig") -> Dict
             "reduction_rate": round(result.reduction_rate, 4),
         },
         "screening": {
-            "click_concentration": s.click_concentration,
+            "click_concentration": _native(s.click_concentration),
             "click_concentration_level": s.click_concentration_level,
-            "session_cv": s.session_cv,
+            "session_cv": _native(s.session_cv),
             "session_cv_level": s.session_cv_level,
-            "sequence_similarity": s.sequence_similarity,
+            "sequence_similarity": _native(s.sequence_similarity),
             "sequence_similarity_level": s.sequence_similarity_level,
             "verdict": s.verdict,
         },
