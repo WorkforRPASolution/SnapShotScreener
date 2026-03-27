@@ -533,8 +533,8 @@
   }
   .img-modal-overlay.active { display: flex; }
   .img-modal-overlay img {
-    width: 98vw;
-    height: 98vh;
+    max-width: 98vw;
+    max-height: 98vh;
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
@@ -776,15 +776,41 @@
 (function() {
   var modal = document.getElementById('imgModal');
   var modalImg = document.getElementById('imgModalContent');
+
   document.querySelectorAll('.frame-img-wrap').forEach(function(wrap) {
     wrap.addEventListener('click', function() {
       var img = wrap.querySelector('img');
-      if (img) {
+      if (!img) return;
+
+      // Load image to get natural dimensions
+      var probe = new Image();
+      probe.onload = function() {
+        var natW = probe.naturalWidth;
+        var natH = probe.naturalHeight;
+        var vw = window.innerWidth * 0.98;
+        var vh = window.innerHeight * 0.98;
+
+        // If image is larger than viewport, constrain to viewport
+        // Otherwise, show at original size
+        if (natW > vw || natH > vh) {
+          modalImg.style.width = '';
+          modalImg.style.height = '';
+          modalImg.style.maxWidth = '98vw';
+          modalImg.style.maxHeight = '98vh';
+        } else {
+          modalImg.style.width = natW + 'px';
+          modalImg.style.height = natH + 'px';
+          modalImg.style.maxWidth = '';
+          modalImg.style.maxHeight = '';
+        }
+
         modalImg.src = img.src;
         modal.classList.add('active');
-      }
+      };
+      probe.src = img.src;
     });
   });
+
   modal.addEventListener('click', function() { modal.classList.remove('active'); });
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') modal.classList.remove('active');
