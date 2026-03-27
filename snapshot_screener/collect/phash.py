@@ -11,7 +11,6 @@ minimise peak memory usage.
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
 from io import BytesIO
 from typing import TYPE_CHECKING, Dict, List, Optional
 
@@ -27,12 +26,6 @@ if TYPE_CHECKING:
     from snapshot_screener.db.cassandra_client import CassandraClient
 
 logger = get_logger(__name__)
-
-
-def _timestamp_ms_to_ymd(timestamp_ms: int) -> tuple[int, int, int]:
-    """Convert millisecond timestamp to ``(year, month, day)``."""
-    dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
-    return dt.year, dt.month, dt.day
 
 
 def collect_phash(
@@ -98,7 +91,7 @@ def collect_phash(
 
     for miss_idx, fname in enumerate(cache_misses_fnames, start=1):
         meta = meta_by_fname[fname]
-        year, month, day = _timestamp_ms_to_ymd(meta.timestamp_ms)
+        year, month, day = meta.partition_year, meta.partition_month, meta.partition_day
 
         # Fetch image from Cassandra
         try:
@@ -190,6 +183,9 @@ def collect_phash(
                 timestamp_ms=meta.timestamp_ms,
                 x=meta.x,
                 y=meta.y,
+                partition_year=meta.partition_year,
+                partition_month=meta.partition_month,
+                partition_day=meta.partition_day,
                 x_norm=x_norm,
                 y_norm=y_norm,
                 phash=entry.phash,

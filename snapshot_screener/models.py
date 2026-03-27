@@ -12,6 +12,10 @@ class SnapshotMeta:
     timestamp_ms: int
     x: int
     y: int
+    # Cassandra partition key date (local timezone, not UTC)
+    partition_year: int = 0
+    partition_month: int = 0
+    partition_day: int = 0
 
 
 @dataclass(slots=True)
@@ -28,6 +32,11 @@ class FrameFeature:
     timestamp_ms: int
     x: int
     y: int
+
+    # Cassandra partition key date
+    partition_year: int = 0
+    partition_month: int = 0
+    partition_day: int = 0
 
     # Normalized coords
     x_norm: float = 0.0

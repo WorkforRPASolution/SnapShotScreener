@@ -5,7 +5,6 @@ for the HTML report, and also preserves raw originals for Vision AI pipeline.
 """
 from __future__ import annotations
 
-import datetime
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List
@@ -59,39 +58,34 @@ def collect_report_images(
     thumbnails: Dict[str, str] = {}
     originals: Dict[str, str] = {}
 
-    # Group features by date (extract from timestamp_ms)
-    date_groups: Dict[datetime.date, List["FrameFeature"]] = {}
     for feat in representative_features:
-        dt = datetime.datetime.fromtimestamp(
-            feat.timestamp_ms / 1000, tz=datetime.timezone.utc
-        )
-        d = dt.date()
-        date_groups.setdefault(d, []).append(feat)
+        if feat.fname in thumbnails:
+            continue  # already collected
 
-    for d, features in sorted(date_groups.items()):
-        year, month, day = d.year, d.month, d.day
-        for feat in features:
-            if feat.fname in thumbnails:
-                continue  # already collected
-
-            try:
-                raw_b64 = client.query_image(eqpid, year, month, day, feat.fname)
-                if raw_b64 is None:
-                    logger.warning(
-                        "Image not found for %s/%s — skipping", eqpid, feat.fname
-                    )
-                    continue
-
-                originals[feat.fname] = raw_b64
-                processed = process_image_for_report(raw_b64)
-                thumbnails[feat.fname] = processed
-            except Exception:
+        try:
+            raw_b64 = client.query_image(
+                eqpid,
+                feat.partition_year,
+                feat.partition_month,
+                feat.partition_day,
+                feat.fname,
+            )
+            if raw_b64 is None:
                 logger.warning(
-                    "Failed to process image %s/%s — skipping",
-                    eqpid,
-                    feat.fname,
-                    exc_info=True,
+                    "Image not found for %s/%s — skipping", eqpid, feat.fname
                 )
+                continue
+
+            originals[feat.fname] = raw_b64
+            processed = process_image_for_report(raw_b64)
+            thumbnails[feat.fname] = processed
+        except Exception:
+            logger.warning(
+                "Failed to process image %s/%s — skipping",
+                eqpid,
+                feat.fname,
+                exc_info=True,
+            )
 
     logger.info(
         "Collected %d/%d images for %s",

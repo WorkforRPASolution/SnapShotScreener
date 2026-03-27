@@ -87,6 +87,9 @@ def collect_metadata(
                     timestamp_ms=timestamp_ms,
                     x=x,
                     y=y,
+                    partition_year=year,
+                    partition_month=month,
+                    partition_day=day,
                 )
             )
 
