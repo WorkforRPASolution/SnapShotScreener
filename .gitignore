@@ -18,3 +18,9 @@ build/
 
 # OS
 .DS_Store
+~$*
+
+# Runtime outputs
+output/
+phash_cache.db
+*.sqlite

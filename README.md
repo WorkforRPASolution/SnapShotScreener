@@ -83,8 +83,18 @@ fname 메타데이터와 pHash만으로 "이 장비에 자동화 가능한 반�
 
 ### 요구 환경
 
-- Python 3.10 이상
+- **Python 3.10 이상**
 - Cassandra 클러스터에 네트워크 접근 가능한 환경 (VPN 또는 사내망)
+
+### 지원 OS
+
+| OS | 최소 버전 | 비고 |
+|----|-----------|------|
+| **Windows** | Windows 8.1 / Server 2012 R2 | Python 3.10+ 런타임 요구. **Server 2012 (non-R2) 미지원** |
+| **Linux** | glibc 2.17+ (CentOS 7, Ubuntu 14.04+) | 대부분의 현대 배포판 지원 |
+| **macOS** | 10.9 (Mavericks)+ | Apple Silicon (M1+) 및 Intel 모두 지원 |
+
+> **PyInstaller exe도 동일한 OS 제약이 적용된다.** exe에 Python 런타임이 내장되므로 대상 PC에 Python 설치는 불필요하지만, 내장된 런타임이 OS API를 요구하므로 위 최소 버전 미만에서는 실행되지 않는다.
 
 ### pip 설치
 
@@ -132,7 +142,56 @@ pyinstaller --onefile --name snapshot-screener snapshot_screener/__main__.py
 
 ## 4. 빠른 시작
 
-### 기본 실행 (단일 장비)
+### Config 파일로 실행 (권장)
+
+모든 파라미터를 YAML config 파일에 정의하여 간편하게 실행할 수 있다. 예제 config는 `config/example.yaml`을 참고한다.
+
+```bash
+# config 파일만으로 실행
+snapshot-screener --config config/my_config.yaml
+
+# config 파일 + CLI 인자 오버라이드 (CLI 인자가 우선)
+snapshot-screener --config config/my_config.yaml --verbose --eqpid EQ-9999
+```
+
+**config 파일 예시** (`config/my_config.yaml`):
+
+```yaml
+# 분석 대상
+eqpid: EQ-2471
+date_from: "2026-03-11"
+date_to: "2026-03-25"
+
+# Cassandra 접속
+db_host: 10.0.1.50
+db_port: 9042
+db_keyspace: factory
+db_table: snapshots
+db_username: null            # 인증 불필요 시 null
+db_password: null            # 또는 SS_DB_PASSWORD 환경변수 사용 권장
+
+# Cassandra 보호 (PRD 기본값)
+read_delay_ms: 200
+fname_delay_ms: 100
+max_connections: 2
+
+# 분석 파라미터
+session_gap_ms: 900000
+phash_similar_threshold: 4
+phash_transition_threshold: 8
+selector: simple
+sensitivity_sweep: false
+fname_pattern: auto
+
+# 출력
+cache_dir: "."
+output_dir: "./output"
+verbose: false
+```
+
+config 파일에서 지원하는 모든 키는 CLI 파라미터와 1:1 대응한다. 전체 파라미터 목록은 [5. CLI 레퍼런스](#5-cli-레퍼런스)를 참조한다. CLI 인자를 추가하면 config 파일의 값을 오버라이드한다.
+
+### 기본 실행 (단일 장비, CLI 직접 지정)
 
 ```bash
 snapshot-screener \
@@ -196,19 +255,28 @@ ls phash_cache.db
 
 ## 5. CLI 레퍼런스
 
-### 필수 파라미터
+### Config 파일
 
 | 파라미터 | 설명 | 예시 |
 |----------|------|------|
-| `--eqpid` | 분석 대상 장비 ID (단일) | `EQ-2471` |
-| `--eqpid-list` | 분석 대상 장비 ID 목록 파일 (복수) | `eqpids.txt` |
-| `--from` | 분석 시작일 (YYYY-MM-DD) | `2026-03-11` |
-| `--to` | 분석 종료일 (YYYY-MM-DD) | `2026-03-25` |
-| `--db-host` | Cassandra 호스트 주소 | `10.0.1.50` |
-| `--db-keyspace` | Cassandra 키스페이스 | `factory` |
-| `--db-table` | Cassandra 테이블 이름 | `snapshots` |
+| `--config` | YAML config 파일 경로 | `config/my_config.yaml` |
 
-`--eqpid`와 `--eqpid-list`는 상호 배타적이다. 둘 중 하나를 반드시 지정해야 한다.
+config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용된다. CLI 인자를 추가로 지정하면 config 파일의 값을 오버라이드한다. 전체 config 파일 예시는 `config/example.yaml`을 참고한다.
+
+### 필수 파라미터
+
+| 파라미터 | Config 키 | 설명 | 예시 |
+|----------|-----------|------|------|
+| `--eqpid` | `eqpid` | 분석 대상 장비 ID (단일) | `EQ-2471` |
+| `--eqpid-list` | `eqpid_list` | 분석 대상 장비 ID 목록 파일 (복수) | `eqpids.txt` |
+| (config 전용) | `eqpids` | 복수 장비 ID 리스트 (YAML) | `[EQ-2471, EQ-2472]` |
+| `--from` | `date_from` | 분석 시작일 (YYYY-MM-DD) | `2026-03-11` |
+| `--to` | `date_to` | 분석 종료일 (YYYY-MM-DD) | `2026-03-25` |
+| `--db-host` | `db_host` | Cassandra 호스트 주소 | `10.0.1.50` |
+| `--db-keyspace` | `db_keyspace` | Cassandra 키스페이스 | `factory` |
+| `--db-table` | `db_table` | Cassandra 테이블 이름 | `snapshots` |
+
+`--eqpid`와 `--eqpid-list`는 상호 배타적이다. 둘 중 하나를 반드시 지정해야 한다. config 파일에서는 `eqpids` 키로 복수 장비를 직접 리스트로 지정할 수도 있다.
 
 ### 선택 파라미터 -- Cassandra 보호
 
@@ -647,8 +715,8 @@ Cassandra에서 이미지를 읽는 비용을 최소화하기 위해 모든 분�
 | 기능 | 라이브러리 | 버전 | 비고 |
 |------|-----------|------|------|
 | Cassandra 조회 | `cassandra-driver` | 3.29+ | SELECT만 사용 |
-| 시계열 처리 | `pandas` | 2.0+ | 세션 분리, 시퀀스 구성 |
 | pHash 계산 | `Pillow`, `imagehash` | 최신 | pHash 계산 + distance 비교 |
+| 설정 파일 | `PyYAML` | 최신 | YAML config 파일 파싱 |
 | 클릭 클러스터링 | `scikit-learn`, `numpy` | 최신 | DBSCAN |
 | 시퀀스 유사도 | 표준 라이브러리 | - | LCS 직접 구현 (DP, 공간 최적화) |
 | pHash 캐시 | `sqlite3` (표준 라이브러리) | - | 로컬 캐시, 추가 설치 불필요 |
