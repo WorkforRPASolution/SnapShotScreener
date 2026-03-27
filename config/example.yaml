@@ -1,5 +1,7 @@
 # SnapshotScreener 설정 파일 예시
 # 사용법: snapshot-screener --config config/example.yaml
+# CLI 인자를 추가하면 config 값을 오버라이드합니다:
+#   snapshot-screener --config config/example.yaml --verbose --eqpid EQ-9999
 
 # ---- 분석 대상 ----
 eqpid: EQ-2471                    # 단일 장비
@@ -12,34 +14,44 @@ eqpid: EQ-2471                    # 단일 장비
 date_from: "2026-03-11"
 date_to: "2026-03-25"
 
-# ---- Cassandra ----
+# ---- Cassandra 접속 ----
 db_host: 10.0.1.50
 db_port: 9042
 db_keyspace: factory
 db_table: snapshots
 db_username: null                  # 인증 불필요 시 null
-db_password: null                  # 또는 SS_DB_PASSWORD 환경변수 사용
+db_password: null                  # 또는 SS_DB_PASSWORD 환경변수 사용 권장
 
 # ---- Cassandra 보호 ----
-read_delay_ms: 200                 # 이미지 쿼리 간격 (ms)
-fname_delay_ms: 100                # fname 쿼리 간격 (ms)
-max_connections: 2
+# 주의: 모든 쿼리는 SELECT 전용이며 파티션 키를 전체 지정합니다 (풀스캔 불가).
+# 아래 값은 PRD 기준 기본값으로, 프로덕션 Cassandra에 안전합니다.
+# 값을 낮추면 실행이 빨라지지만 Cassandra 부하가 증가합니다.
+read_delay_ms: 200                 # 이미지 쿼리 간격 (ms, PRD 기본값)
+fname_delay_ms: 100                # fname 쿼리 간격 (ms, PRD 기본값)
+max_connections: 2                 # 커넥션 풀 최대 크기 (PRD 기본값)
+#
+# 최초 실행 예상 부하 (14일 × 3,000장/일 기준):
+#   Phase 1 (fname 조회): 14 쿼리, ~2초
+#   Phase 2 (pHash 계산): 42,000 이미지 × 200ms = ~2시간 20분
+#   Phase 4 (리포트 이미지): ~100장 × 200ms = ~20초
+# → 최초 실행은 야간/새벽 시간대 권장
+# → 2회차 이후: pHash 캐시 히트로 수 분 내 완료
 
 # ---- 분석 파라미터 ----
-session_gap_ms: 900000             # 세션 분리 gap (15분)
-phash_similar_threshold: 4         # 같은 화면 판정 임계값
-phash_transition_threshold: 8      # 화면 전환 판정 임계값
-delta_spike_ms: 30000              # 시간 스파이크 임계값
-dbscan_eps: 0.03                   # DBSCAN epsilon
-dbscan_min_samples: 2              # DBSCAN 최소 샘플
+session_gap_ms: 900000             # 세션 분리 gap (15분, 900,000ms)
+phash_similar_threshold: 4         # 같은 화면 판정 pHash 거리 임계값
+phash_transition_threshold: 8      # 화면 전환 판정 pHash 거리 임계값
+delta_spike_ms: 30000              # 시간 간격 스파이크 임계값 (30초)
+dbscan_eps: 0.03                   # DBSCAN epsilon (정규화 좌표 기준, 0.03 = 화면의 3%)
+dbscan_min_samples: 2              # DBSCAN 최소 샘플 수
 screen_width: 1920                 # 화면 해상도 (좌표 정규화용)
 screen_height: 1080
-selector: simple                   # simple | scored
-sensitivity_sweep: false           # true로 설정 시 레이어 C 분석
+selector: simple                   # simple (파일럿) | scored (Phase 2용)
+sensitivity_sweep: false           # true: 레이어 C 파라미터 민감도 분석 실행
 fname_pattern: auto                # auto | xy_ts | ts_xy | 커스텀 정규식
 
 # ---- 출력 ----
-cache_dir: "."
-output_dir: "./output"
-invalidate_cache: false
-verbose: false
+cache_dir: "."                     # pHash 캐시 SQLite 저장 위치
+output_dir: "./output"             # HTML 리포트 + JSON + 원본 프레임 출력 위치
+invalidate_cache: false            # true: 기존 캐시 삭제 후 재계산
+verbose: false                     # true: DEBUG 레벨 로깅
