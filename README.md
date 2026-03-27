@@ -306,7 +306,7 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | `--screen-height` | 1080 | 화면 해상도 세로 (좌표 정규화용, px) |
 | `--selector` | simple | 대표 프레임 선택기 (`simple` 또는 `scored`) |
 | `--sensitivity-sweep` | (플래그) | Layer C 파라미터 민감도 분석 활성화 |
-| `--fname-pattern` | auto | fname 파싱 패턴 (`auto`, `xy_ts`, `ts_xy`, 또는 커스텀 정규식) |
+| `--fname-pattern` | auto | fname 파싱 패턴 (`auto`, `ts_bracket`, `xy_ts`, `ts_xy`, 또는 커스텀 정규식) |
 
 ### 선택 파라미터 -- 캐시/출력
 
@@ -416,7 +416,8 @@ snapshot-screener --eqpid EQ-2471 --from 2026-03-11 --to 2026-03-25 \
 Cassandra에서 지정된 장비와 기간의 fname 목록을 조회한다. image 컬럼은 제외하여 Cassandra 부하를 최소화한다. 일별 순차 조회(파티션 1개 = 장비 1대 x 1일)로 처리하며, 파티션 간 `--fname-delay-ms`(기본 100ms) 간격을 적용한다.
 
 fname 문자열에서 클릭 좌표(x, y)와 Unix timestamp(ms)를 파싱한다. `--fname-pattern` 파라미터로 파싱 패턴을 지정할 수 있다:
-- `auto`: 자동 감지
+- `auto`: 자동 감지 (아래 순서로 시도)
+- `ts_bracket`: `{timestamp}_[{x}][{y}].png` 형식 (프로덕션 기본)
 - `xy_ts`: `{x}_{y}_{timestamp}.png` 형식
 - `ts_xy`: `{timestamp}_{x}_{y}.png` 형식
 - 커스텀 정규식: 사용자 지정 패턴

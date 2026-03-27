@@ -48,7 +48,7 @@ screen_width: 1920                 # 화면 해상도 (좌표 정규화용)
 screen_height: 1080
 selector: simple                   # simple (파일럿) | scored (Phase 2용)
 sensitivity_sweep: false           # true: 레이어 C 파라미터 민감도 분석 실행
-fname_pattern: auto                # auto | xy_ts | ts_xy | 커스텀 정규식
+fname_pattern: auto                # auto | ts_bracket | xy_ts | ts_xy | 커스텀 정규식
 
 # ---- 출력 ----
 cache_dir: "."                     # pHash 캐시 SQLite 저장 위치
