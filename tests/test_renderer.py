@@ -261,9 +261,8 @@ class TestRenderer:
         # Check that click-dot is rendered via CSS, not canvas
         assert "click-dot" in html
         assert 'class="click-dot"' in html
-        # Should not have canvas or JavaScript
+        # Should not have canvas (JavaScript is OK for zoom modal)
         assert "<canvas" not in html
-        assert "<script" not in html
 
     def test_output_filename_format(self, tmp_path: Path) -> None:
         """Output filename follows expected pattern."""

@@ -6,27 +6,27 @@
 <title>SnapshotScreener 분석 리포트 — {{ eqpid }}</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --bg-card: #1a1d27;
-    --bg-card-hover: #1f2330;
-    --border: #2a2d3a;
-    --border-light: #353849;
-    --text: #e4e6ed;
-    --text-dim: #8b8fa3;
-    --text-muted: #5c6072;
-    --accent: #4e8cff;
-    --accent-dim: rgba(78,140,255,0.12);
-    --green: #34d399;
-    --green-dim: rgba(52,211,153,0.12);
-    --amber: #fbbf24;
-    --amber-dim: rgba(251,191,36,0.12);
-    --red: #f87171;
-    --red-dim: rgba(248,113,113,0.12);
-    --click-dot: #ff4d6a;
-    --transition-tag: #a78bfa;
-    --session-tag: #38bdf8;
-    --screen-tag: #34d399;
-    --cluster-tag: #fb923c;
+    --bg: #f8f9fc;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f0f2f7;
+    --border: #e2e5ea;
+    --border-light: #cdd1d9;
+    --text: #111827;
+    --text-dim: #374151;
+    --text-muted: #6b7280;
+    --accent: #2563eb;
+    --accent-dim: rgba(37,99,235,0.08);
+    --green: #059669;
+    --green-dim: rgba(5,150,105,0.08);
+    --amber: #d97706;
+    --amber-dim: rgba(217,119,6,0.08);
+    --red: #dc2626;
+    --red-dim: rgba(220,38,38,0.08);
+    --click-dot: #e11d48;
+    --transition-tag: #7c3aed;
+    --session-tag: #0284c7;
+    --screen-tag: #059669;
+    --cluster-tag: #ea580c;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,12 +35,12 @@
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
     background: var(--bg);
     color: var(--text);
-    line-height: 1.6;
+    line-height: 1.7;
     padding: 0;
   }
 
   .report-header {
-    background: linear-gradient(135deg, #161822 0%, #1a1f35 100%);
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
     border-bottom: 1px solid var(--border);
     padding: 48px 0 40px;
   }
@@ -52,15 +52,16 @@
   }
 
   .report-header h1 {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
     letter-spacing: -0.5px;
     margin-bottom: 6px;
+    color: var(--text);
   }
 
   .report-header .subtitle {
     color: var(--text-dim);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 400;
   }
 
@@ -79,18 +80,16 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px 16px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
-  .meta-chip .label {
-    color: var(--text-muted);
-  }
+  .meta-chip .label { color: var(--text-muted); }
 
   .meta-chip .value {
     color: var(--text);
     font-weight: 500;
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .container {
@@ -99,13 +98,10 @@
     padding: 40px;
   }
 
-  /* Section */
-  .section {
-    margin-bottom: 48px;
-  }
+  .section { margin-bottom: 48px; }
 
   .section-title {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     margin-bottom: 20px;
     display: flex;
@@ -122,7 +118,7 @@
     background: var(--accent-dim);
     color: var(--accent);
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     font-family: 'Consolas', 'Courier New', monospace;
   }
@@ -142,12 +138,10 @@
     transition: border-color 0.2s;
   }
 
-  .summary-card:hover {
-    border-color: var(--border-light);
-  }
+  .summary-card:hover { border-color: var(--border-light); }
 
   .summary-card .card-label {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -155,14 +149,14 @@
   }
 
   .summary-card .card-value {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: -1px;
   }
 
   .summary-card .card-unit {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-dim);
     font-weight: 400;
     margin-left: 4px;
@@ -188,12 +182,12 @@
     justify-content: space-between;
     padding: 16px 24px;
     border-bottom: 1px solid var(--border);
-    background: rgba(255,255,255,0.01);
+    background: rgba(0,0,0,0.02);
   }
 
   .session-id {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--session-tag);
   }
@@ -201,13 +195,11 @@
   .session-stats {
     display: flex;
     gap: 16px;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-dim);
   }
 
-  .session-stats span {
-    font-family: 'Consolas', 'Courier New', monospace;
-  }
+  .session-stats span { font-family: 'Consolas', 'Courier New', monospace; }
 
   .frame-sequence {
     padding: 24px;
@@ -233,7 +225,7 @@
 
   .frame-time {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-muted);
     white-space: nowrap;
   }
@@ -257,9 +249,7 @@
     transition: border-color 0.2s;
   }
 
-  .frame-content:hover {
-    border-color: var(--border-light);
-  }
+  .frame-content:hover { border-color: var(--border-light); }
 
   .frame-img-wrap {
     position: relative;
@@ -268,7 +258,8 @@
     flex-shrink: 0;
     border-radius: 6px;
     overflow: hidden;
-    background: #12141c;
+    background: #f0f2f7;
+    cursor: pointer;
   }
 
   .frame-img-wrap img {
@@ -284,9 +275,9 @@
     height: 18px;
     border-radius: 50%;
     background: var(--click-dot);
-    border: 2px solid #fff;
+    border: 2px solid #ffffff;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 12px rgba(255,77,106,0.5);
+    box-shadow: 0 0 12px rgba(225,29,72,0.4);
     z-index: 2;
     pointer-events: none;
   }
@@ -296,7 +287,7 @@
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    border: 1px solid rgba(255,77,106,0.3);
+    border: 1px solid rgba(225,29,72,0.25);
     animation: pulse 2s ease-out infinite;
   }
 
@@ -315,7 +306,7 @@
 
   .frame-fname {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-dim);
     word-break: break-all;
   }
@@ -332,18 +323,18 @@
     gap: 4px;
     padding: 3px 10px;
     border-radius: 5px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
   }
 
-  .tag-screen { background: rgba(52,211,153,0.12); color: var(--screen-tag); }
-  .tag-transition { background: rgba(167,139,250,0.12); color: var(--transition-tag); }
-  .tag-session { background: rgba(56,189,248,0.12); color: var(--session-tag); }
-  .tag-cluster { background: rgba(251,146,60,0.12); color: var(--cluster-tag); }
+  .tag-screen { background: rgba(5,150,105,0.08); color: var(--screen-tag); }
+  .tag-transition { background: rgba(124,58,237,0.08); color: var(--transition-tag); }
+  .tag-session { background: rgba(2,132,199,0.08); color: var(--session-tag); }
+  .tag-cluster { background: rgba(234,88,12,0.08); color: var(--cluster-tag); }
 
   .frame-coord {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-dim);
   }
 
@@ -354,7 +345,7 @@
   }
 
   .frame-desc {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-dim);
     line-height: 1.5;
   }
@@ -362,7 +353,7 @@
   .frame-score {
     margin-top: auto;
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-muted);
   }
 
@@ -386,7 +377,7 @@
   }
 
   .signal-label {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-dim);
     margin-bottom: 12px;
   }
@@ -399,14 +390,14 @@
   }
 
   .signal-value {
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 700;
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: -1px;
   }
 
   .signal-unit {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-dim);
   }
 
@@ -430,7 +421,7 @@
   .signal-bar-fill.red { background: var(--red); }
 
   .signal-verdict {
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 10px;
     border-radius: 5px;
     display: inline-block;
@@ -444,17 +435,17 @@
   .sensitivity-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .sensitivity-table th {
     text-align: left;
     padding: 10px 16px;
-    background: rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.03);
     border-bottom: 1px solid var(--border);
     color: var(--text-muted);
     font-weight: 500;
-    font-size: 12px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -463,12 +454,10 @@
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 13px;
   }
 
-  .sensitivity-table tr:last-child td {
-    border-bottom: none;
-  }
+  .sensitivity-table tr:last-child td { border-bottom: none; }
 
   /* Verdict */
   .verdict-box {
@@ -495,13 +484,13 @@
   .verdict-icon.negative { background: var(--red-dim); }
 
   .verdict-title {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     margin-bottom: 8px;
   }
 
   .verdict-desc {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-dim);
     max-width: 600px;
     margin: 0 auto;
@@ -516,7 +505,7 @@
     padding: 48px 32px;
     text-align: center;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 15px;
   }
 
   /* Footer */
@@ -524,10 +513,31 @@
     border-top: 1px solid var(--border);
     padding: 24px 40px;
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-muted);
     max-width: 1200px;
     margin: 0 auto;
+  }
+
+  /* Image Modal (click to zoom) */
+  .img-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+  }
+  .img-modal-overlay.active { display: flex; }
+  .img-modal-overlay img {
+    width: 98vw;
+    height: 98vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
   }
 
   @media (max-width: 860px) {
@@ -568,9 +578,19 @@
 
 <div class="container">
 
-  <!-- Section 1: Summary -->
+  <!-- Section 1: Verdict (moved to top) -->
   <div class="section">
-    <h2 class="section-title"><span class="num">1</span> 장비 요약</h2>
+    <h2 class="section-title"><span class="num">1</span> 종합 판정</h2>
+    <div class="verdict-box">
+      <div class="verdict-icon {% if verdict_color == 'green' %}positive{% elif verdict_color == 'amber' %}caution{% else %}negative{% endif %}">{% if verdict_color == 'green' %}&#x2713;{% elif verdict_color == 'amber' %}&#x26A0;{% else %}&#x2717;{% endif %}</div>
+      <div class="verdict-title highlight-{{ verdict_color }}">{{ verdict }}</div>
+      <div class="verdict-desc">{{ verdict_desc }}</div>
+    </div>
+  </div>
+
+  <!-- Section 2: Summary -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">2</span> 장비 요약</h2>
     <div class="summary-grid">
       <div class="summary-card">
         <div class="card-label">총 클릭 수</div>
@@ -599,9 +619,9 @@
     </div>
   </div>
 
-  <!-- Section 2: Representative Frames -->
+  <!-- Section 3: Representative Frames -->
   <div class="section">
-    <h2 class="section-title"><span class="num">2</span> 대표 프레임 시퀀스</h2>
+    <h2 class="section-title"><span class="num">3</span> 대표 프레임 시퀀스</h2>
 
     {% if sessions %}
     {% for session in sessions %}
@@ -627,7 +647,7 @@
               <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
               <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
               {% else %}
-              <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:12px;">이미지 없음</div>
+              <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px;">이미지 없음</div>
               {% endif %}
             </div>
             <div class="frame-info">
@@ -652,9 +672,9 @@
     {% endif %}
   </div>
 
-  <!-- Section 3: Pattern Screening Signals -->
+  <!-- Section 4: Pattern Screening Signals -->
   <div class="section">
-    <h2 class="section-title"><span class="num">3</span> 패턴 스크리닝 신호 (레이어 B)</h2>
+    <h2 class="section-title"><span class="num">4</span> 패턴 스크리닝 신호 (레이어 B)</h2>
     <div class="signals-grid">
       {% if screening.click_concentration is not none %}
       <div class="signal-card">
@@ -690,9 +710,9 @@
     </div>
   </div>
 
-  <!-- Section 4: Parameter Sensitivity -->
+  <!-- Section 5: Parameter Sensitivity -->
   <div class="section">
-    <h2 class="section-title"><span class="num">4</span> 파라미터 민감도 분석 (레이어 C)</h2>
+    <h2 class="section-title"><span class="num">5</span> 파라미터 민감도 분석 (레이어 C)</h2>
     {% if sensitivity is not none %}
     <div class="session-block">
       <div class="session-header">
@@ -741,21 +761,36 @@
     {% endif %}
   </div>
 
-  <!-- Section 5: Verdict -->
-  <div class="section">
-    <h2 class="section-title"><span class="num">5</span> 종합 판정</h2>
-    <div class="verdict-box">
-      <div class="verdict-icon {% if verdict_color == 'green' %}positive{% elif verdict_color == 'amber' %}caution{% else %}negative{% endif %}">{% if verdict_color == 'green' %}&#x2713;{% elif verdict_color == 'amber' %}&#x26A0;{% else %}&#x2717;{% endif %}</div>
-      <div class="verdict-title highlight-{{ verdict_color }}">{{ verdict }}</div>
-      <div class="verdict-desc">{{ verdict_desc }}</div>
-    </div>
-  </div>
-
 </div>
 
 <div class="report-footer">
   대표 스냅샷 추출기 {{ version }} &middot; 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
 </div>
+
+<!-- Image zoom modal -->
+<div class="img-modal-overlay" id="imgModal">
+  <img id="imgModalContent" src="" alt="확대 보기">
+</div>
+
+<script>
+(function() {
+  var modal = document.getElementById('imgModal');
+  var modalImg = document.getElementById('imgModalContent');
+  document.querySelectorAll('.frame-img-wrap').forEach(function(wrap) {
+    wrap.addEventListener('click', function() {
+      var img = wrap.querySelector('img');
+      if (img) {
+        modalImg.src = img.src;
+        modal.classList.add('active');
+      }
+    });
+  });
+  modal.addEventListener('click', function() { modal.classList.remove('active'); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') modal.classList.remove('active');
+  });
+})();
+</script>
 
 </body>
 </html>

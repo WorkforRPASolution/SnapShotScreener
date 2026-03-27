@@ -10,7 +10,10 @@ Orchestrates the full 5-phase analysis pipeline:
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+import base64
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from snapshot_screener.analysis import (
     assign_screen_groups,
@@ -167,11 +170,94 @@ def run_single_equipment(
     logger.info(
         f"[Phase 4] {eqpid} — 리포트 이미지 수집 ({len(representative_features)}장)"
     )
-    images = collect_report_images(client, representative_features, eqpid, config)
+    collected = collect_report_images(client, representative_features, eqpid, config)
 
-    # Phase 5: Report generation
-    logger.info(f"[Phase 5] {eqpid} — 리포트 생성")
-    report_path = render_report(result, images, config)
-    logger.info(f"리포트 생성 완료: {report_path}")
+    # Phase 5: Report generation + original image export + JSON export
+    logger.info(f"[Phase 5] {eqpid} — 리포트 및 산출물 생성")
+
+    output_dir = Path(config.output_dir)
+    date_from_str = str(config.date_from).replace("-", "")
+    date_to_str = str(config.date_to).replace("-", "")
+    base_name = f"SnapshotScreener_{eqpid}_{date_from_str}-{date_to_str}"
+
+    # 5a: HTML report (thumbnails)
+    report_path = render_report(result, collected.thumbnails, config)
+    logger.info(f"HTML 리포트: {report_path}")
+
+    # 5b: Save original images to frames/ directory
+    frames_dir = output_dir / base_name / "frames"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    saved_count = 0
+    for feat in representative_features:
+        raw_b64 = collected.originals.get(feat.fname)
+        if raw_b64 is None:
+            continue
+        # Save as original PNG
+        img_bytes = base64.b64decode(raw_b64)
+        img_path = frames_dir / feat.fname
+        img_path.write_bytes(img_bytes)
+        saved_count += 1
+    logger.info(f"원본 이미지 저장: {frames_dir} ({saved_count}장)")
+
+    # 5c: JSON export (machine-readable analysis result)
+    json_path = output_dir / f"{base_name}.json"
+    json_data = _build_json_export(result, config)
+    json_path.write_text(json.dumps(json_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info(f"JSON 익스포트: {json_path}")
 
     return result
+
+
+def _build_json_export(result: AnalysisResult, config: "ScreenerConfig") -> Dict[str, Any]:
+    """Build a machine-readable JSON export of the analysis result."""
+    s = result.screening
+
+    representative_frames = []
+    for f in result.representative_features:
+        representative_frames.append({
+            "fname": f.fname,
+            "timestamp_ms": f.timestamp_ms,
+            "x": f.x,
+            "y": f.y,
+            "session_id": f.session_id,
+            "screen_group_id": f.screen_group_id,
+            "click_cluster_id": f.click_cluster_id,
+            "is_transition_point": f.is_transition_point,
+            "candidate_score": f.candidate_score,
+            "candidate_flags": f.candidate_flags,
+        })
+
+    return {
+        "version": "1.0",
+        "eqpid": result.eqpid,
+        "date_from": str(config.date_from),
+        "date_to": str(config.date_to),
+        "summary": {
+            "total_clicks": result.total_clicks,
+            "analysis_days": result.analysis_days,
+            "session_count": result.session_count,
+            "screen_group_count": result.screen_group_count,
+            "representative_count": result.representative_count,
+            "reduction_rate": round(result.reduction_rate, 4),
+        },
+        "screening": {
+            "click_concentration": s.click_concentration,
+            "click_concentration_level": s.click_concentration_level,
+            "session_cv": s.session_cv,
+            "session_cv_level": s.session_cv_level,
+            "sequence_similarity": s.sequence_similarity,
+            "sequence_similarity_level": s.sequence_similarity_level,
+            "verdict": s.verdict,
+        },
+        "sensitivity": {
+            "threshold_values": result.sensitivity.threshold_values,
+            "min_jaccard": result.sensitivity.min_jaccard,
+            "sensitivity_verdict": result.sensitivity.sensitivity_verdict,
+            "jaccard_pairs": [
+                {"t1": p[0], "t2": p[1], "jaccard": round(p[2], 4)}
+                for p in result.sensitivity.jaccard_pairs
+            ],
+        } if result.sensitivity else None,
+        "config": result.config_summary,
+        "representative_frames": representative_frames,
+    }

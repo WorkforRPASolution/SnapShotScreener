@@ -420,7 +420,7 @@ class TestRunSingleEquipment:
 
         with patch("snapshot_screener.pipeline.collect_metadata", return_value=metas), \
              patch("snapshot_screener.pipeline.collect_phash", return_value=features), \
-             patch("snapshot_screener.pipeline.collect_report_images", return_value={}), \
+             patch("snapshot_screener.pipeline.collect_report_images", return_value=MagicMock(thumbnails={}, originals={})), \
              patch("snapshot_screener.pipeline.render_report", return_value=tmp_path / "report.html"):
 
             result = run_single_equipment(mock_client, "EQ-TEST", config)
