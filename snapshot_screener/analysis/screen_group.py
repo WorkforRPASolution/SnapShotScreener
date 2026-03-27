@@ -67,7 +67,7 @@ def assign_screen_groups(
             frame.is_new_screen = False
 
     # Canonical remapping: revisited screens get the same group ID
-    canonical: dict[str, tuple[str, imagehash.ImageHash]] = {}  # sg_id -> (sg_id, parsed_hash)
+    canonical: dict[str, tuple[str, imagehash.ImageHash]] = {}  # phash -> (sg_id, parsed_hash)
     for frame in features:
         if frame.phash is None:
             continue
@@ -76,11 +76,17 @@ def assign_screen_groups(
         for known_ph_key, (canon_id, known_hash) in canonical.items():
             if frame_hash - known_hash <= phash_similar_threshold:
                 frame.screen_group_id = canon_id
-                frame.is_new_screen = False  # returning to known screen
                 matched = True
                 break
         if not matched:
             canonical[frame.phash] = (frame.screen_group_id, frame_hash)
+
+    # Recompute is_new_screen based on final screen_group_id assignments
+    for i, frame in enumerate(features):
+        if i == 0:
+            frame.is_new_screen = True
+        else:
+            frame.is_new_screen = (frame.screen_group_id != features[i - 1].screen_group_id)
 
     for f in features:
         f._phase_completed = 2

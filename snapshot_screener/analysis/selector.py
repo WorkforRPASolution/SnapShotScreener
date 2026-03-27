@@ -56,14 +56,14 @@ def select_representatives(
 
 
 def _simple_selector(features: List[FrameFeature]) -> None:
-    """First frame per unique screen_group_id + session boundaries, deduped."""
+    """First frame per unique screen_group_id per session + session boundaries, deduped."""
     selected_fnames: set[str] = set()
-    seen_groups: set[str | None] = set()
 
-    # First frame per unique screen_group_id
+    # First frame per unique screen_group_id PER SESSION
+    session_seen: dict[str, set[str | None]] = defaultdict(set)
     for f in features:
-        if f.screen_group_id not in seen_groups:
-            seen_groups.add(f.screen_group_id)
+        if f.screen_group_id not in session_seen[f.session_id]:
+            session_seen[f.session_id].add(f.screen_group_id)
             selected_fnames.add(f.fname)
 
     # Session start/end frames
