@@ -104,22 +104,38 @@ class CassandraClient:
     # ------------------------------------------------------------------
 
     def __enter__(self) -> "CassandraClient":
-        self._session = self._cluster.connect()
+        host = self._config.db_host
+        port = self._config.db_port
+
+        # Connect to cluster
+        try:
+            self._session = self._cluster.connect()
+        except Exception as exc:
+            raise ConnectionError(
+                f"Cassandra 연결 실패 ({host}:{port}): {exc}"
+            ) from exc
+
         self._session.default_timeout = 15.0
 
         # Prepare statements (keyspace/table filled once here)
         ks = self._config.db_keyspace
         tbl = self._config.db_table
 
-        self._prep_fnames = self._session.prepare(
-            _Q_FNAMES.format(ks=ks, tbl=tbl)
-        )
-        self._prep_fnames.consistency_level = ConsistencyLevel.LOCAL_ONE
+        try:
+            self._prep_fnames = self._session.prepare(
+                _Q_FNAMES.format(ks=ks, tbl=tbl)
+            )
+            self._prep_fnames.consistency_level = ConsistencyLevel.LOCAL_ONE
 
-        self._prep_image = self._session.prepare(
-            _Q_IMAGE.format(ks=ks, tbl=tbl)
-        )
-        self._prep_image.consistency_level = ConsistencyLevel.LOCAL_ONE
+            self._prep_image = self._session.prepare(
+                _Q_IMAGE.format(ks=ks, tbl=tbl)
+            )
+            self._prep_image.consistency_level = ConsistencyLevel.LOCAL_ONE
+        except Exception as exc:
+            self._cluster.shutdown()
+            raise ConnectionError(
+                f"Cassandra 쿼리 준비 실패 (keyspace={ks!r}, table={tbl!r}): {exc}"
+            ) from exc
 
         # Health check
         try:
@@ -127,15 +143,10 @@ class CassandraClient:
         except Exception as exc:
             self._cluster.shutdown()
             raise ConnectionError(
-                f"Cassandra health-check failed ({self._config.db_host}:"
-                f"{self._config.db_port}): {exc}"
+                f"Cassandra health-check 실패 ({host}:{port}): {exc}"
             ) from exc
 
-        logger.info(
-            "Connected to Cassandra at %s:%s",
-            self._config.db_host,
-            self._config.db_port,
-        )
+        logger.info("Connected to Cassandra at %s:%s", host, port)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]

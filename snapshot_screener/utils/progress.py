@@ -20,6 +20,10 @@ def setup_logging(verbose: bool = False) -> None:
 
     logging.basicConfig(level=level, format=fmt, datefmt=datefmt, force=True)
 
+    # Suppress cassandra-driver internal logs (connection retries, protocol downgrades, stacktraces).
+    # We catch and re-raise all errors with clean Korean messages.
+    logging.getLogger("cassandra").setLevel(logging.CRITICAL)
+
 
 def get_logger(name: str) -> logging.Logger:
     """Return a named logger.
