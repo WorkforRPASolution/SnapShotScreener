@@ -145,6 +145,7 @@ def _build_sessions_context(
     result: AnalysisResult,
     images: Dict[str, str],
     config: ScreenerConfig,
+    frames_rel_dir: str = "",
 ) -> List[Dict[str, Any]]:
     """Build session list context from representative features."""
     # Group by session_id
@@ -199,11 +200,17 @@ def _build_sessions_context(
                 (feat.y / config.screen_height) * 100 if config.screen_height else 0
             )
 
+            # Relative path to original image in frames/ directory
+            original_path = ""
+            if frames_rel_dir:
+                original_path = f"{frames_rel_dir}/{feat.fname}"
+
             frames.append(
                 {
                     "time": time_str,
                     "fname": feat.fname,
                     "b64": images.get(feat.fname),
+                    "original_path": original_path,
                     "x_pct": round(x_pct, 2),
                     "y_pct": round(y_pct, 2),
                     "x": feat.x,
@@ -215,6 +222,16 @@ def _build_sessions_context(
                 }
             )
 
+        # Screen group sequence for this session (from ALL features, not just reps)
+        sg_sequence = []
+        for feat in sorted(
+            [f for f in result.all_features if f.session_id == sid],
+            key=lambda f: f.timestamp_ms,
+        ):
+            sg = feat.screen_group_id or "?"
+            if not sg_sequence or sg_sequence[-1] != sg:
+                sg_sequence.append(sg)
+
         sessions.append(
             {
                 "id": sid,
@@ -222,10 +239,29 @@ def _build_sessions_context(
                 "time_range": time_range,
                 "frame_count": len(frames),
                 "frames": frames,
+                "sg_sequence": sg_sequence,
+                "sg_sequence_key": " → ".join(sg_sequence),
             }
         )
 
-    return sessions
+    # Group sessions by screen_group sequence pattern
+    pattern_groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for sess in sessions:
+        pattern_groups[sess["sg_sequence_key"]].append(sess)
+
+    grouped: List[Dict[str, Any]] = []
+    for pattern_key, group_sessions in sorted(
+        pattern_groups.items(), key=lambda kv: -len(kv[1])
+    ):
+        grouped.append(
+            {
+                "pattern": pattern_key,
+                "count": len(group_sessions),
+                "sessions": group_sessions,
+            }
+        )
+
+    return grouped
 
 
 def _build_sensitivity_context(
@@ -288,6 +324,12 @@ def render_report(
         parts.append(f"시퀀스 유사도 {s.sequence_similarity:.2f}")
     verdict_desc = ", ".join(parts) + "." if parts else ""
 
+    # Relative path from HTML to frames/ directory
+    date_from_str = str(config.date_from).replace("-", "")
+    date_to_str = str(config.date_to).replace("-", "")
+    base_name = f"SnapshotScreener_{result.eqpid}_{date_from_str}-{date_to_str}"
+    frames_rel_dir = f"{base_name}/frames"
+
     context = {
         "eqpid": result.eqpid,
         "date_from": str(config.date_from),
@@ -300,7 +342,7 @@ def render_report(
         "screen_group_count": result.screen_group_count,
         "representative_count": result.representative_count,
         "reduction_rate": result.reduction_rate,
-        "sessions": _build_sessions_context(result, images, config),
+        "pattern_groups": _build_sessions_context(result, images, config, frames_rel_dir),
         "screening": _build_screening_context(result),
         "sensitivity": _build_sensitivity_context(result),
         "verdict": verdict,
@@ -313,9 +355,7 @@ def render_report(
     # Write output
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    date_from_str = str(config.date_from).replace("-", "")
-    date_to_str = str(config.date_to).replace("-", "")
-    filename = f"SnapshotScreener_{result.eqpid}_{date_from_str}-{date_to_str}.html"
+    filename = f"{base_name}.html"
     output_path = output_dir / filename
 
     output_path.write_text(html, encoding="utf-8")

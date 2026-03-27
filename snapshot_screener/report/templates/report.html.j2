@@ -362,6 +362,88 @@
     font-weight: 600;
   }
 
+  /* Pattern Groups */
+  .pattern-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .pattern-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .pattern-header:hover { background: rgba(37,99,235,0.12); }
+
+  .pattern-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .pattern-sequence {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    margin-left: 12px;
+  }
+
+  .pattern-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .pattern-toggle {
+    font-size: 18px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+
+  .pattern-group.open > .pattern-header .pattern-toggle { transform: rotate(180deg); }
+
+  .pattern-body {
+    display: none;
+    padding: 0;
+  }
+
+  .pattern-group.open > .pattern-body { display: block; }
+
+  /* Session Accordion */
+  .session-block { margin: 0; border-radius: 0; border-left: none; border-right: none; border-top: none; }
+  .session-block:last-child { border-bottom: none; }
+
+  .session-header {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .session-header:hover { background: rgba(0,0,0,0.03); }
+
+  .session-toggle {
+    font-size: 14px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    margin-right: 8px;
+  }
+
+  .session-block.open > .session-header .session-toggle { transform: rotate(90deg); }
+
+  .frame-sequence {
+    display: none;
+  }
+
+  .session-block.open > .frame-sequence { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+
   /* Signals */
   .signals-grid {
     display: grid;
@@ -619,48 +701,65 @@
     </div>
   </div>
 
-  <!-- Section 3: Representative Frames -->
+  <!-- Section 3: Representative Frames (grouped by pattern) -->
   <div class="section">
     <h2 class="section-title"><span class="num">3</span> 대표 프레임 시퀀스</h2>
 
-    {% if sessions %}
-    {% for session in sessions %}
-    <div class="session-block">
-      <div class="session-header">
-        <div class="session-id">Session {{ session.id }}</div>
-        <div class="session-stats">
-          <span>클릭 {{ session.click_count }}회</span>
-          <span>{{ session.time_range }}</span>
-          <span>대표 프레임 {{ session.frame_count }}개</span>
+    {% if pattern_groups %}
+    {% for group in pattern_groups %}
+    <div class="pattern-group{% if loop.first %} open{% endif %}">
+      <div class="pattern-header" onclick="this.parentElement.classList.toggle('open')">
+        <div>
+          <span class="pattern-label">패턴 {{ loop.index }}</span>
+          <span class="pattern-sequence">{{ group.pattern }}</span>
+          <span class="pattern-count">({{ group.count }}개 세션)</span>
         </div>
+        <span class="pattern-toggle">&#9660;</span>
       </div>
-      <div class="frame-sequence">
-        {% for frame in session.frames %}
-        <div class="frame-row">
-          <div class="frame-timeline">
-            <span class="frame-time">{{ frame.time }}</span>
-            {% if not loop.last %}<div class="frame-line"></div>{% endif %}
+      <div class="pattern-body">
+        {% for session in group.sessions %}
+        <div class="session-block{% if loop.first %} open{% endif %}">
+          <div class="session-header" onclick="this.parentElement.classList.toggle('open')">
+            <div style="display:flex;align-items:center;">
+              <span class="session-toggle">&#9654;</span>
+              <span class="session-id">{{ session.id }}</span>
+            </div>
+            <div class="session-stats">
+              <span>클릭 {{ session.click_count }}회</span>
+              <span>{{ session.time_range }}</span>
+              <span>대표 프레임 {{ session.frame_count }}개</span>
+            </div>
           </div>
-          <div class="frame-content">
-            <div class="frame-img-wrap">
-              {% if frame.b64 %}
-              <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
-              <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
-              {% else %}
-              <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px;">이미지 없음</div>
-              {% endif %}
-            </div>
-            <div class="frame-info">
-              <div class="frame-fname">{{ frame.fname }}</div>
-              <div class="frame-tags">
-                {% for i in range(frame.tags | length) %}
-                <span class="tag {{ frame.tag_classes[i] }}">{{ frame.tags[i] }}</span>
-                {% endfor %}
+          <div class="frame-sequence">
+            {% for frame in session.frames %}
+            <div class="frame-row">
+              <div class="frame-timeline">
+                <span class="frame-time">{{ frame.time }}</span>
+                {% if not loop.last %}<div class="frame-line"></div>{% endif %}
               </div>
-              <div class="frame-coord">클릭 좌표: <em>({{ frame.x }}, {{ frame.y }})</em></div>
-              <div class="frame-desc">{{ frame.desc }}</div>
-              <div class="frame-score">candidate_score: <strong>{{ frame.score }}</strong></div>
+              <div class="frame-content">
+                <div class="frame-img-wrap" {% if frame.original_path %}data-original="{{ frame.original_path }}"{% endif %}>
+                  {% if frame.b64 %}
+                  <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
+                  <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
+                  {% else %}
+                  <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px;">이미지 없음</div>
+                  {% endif %}
+                </div>
+                <div class="frame-info">
+                  <div class="frame-fname">{{ frame.fname }}</div>
+                  <div class="frame-tags">
+                    {% for i in range(frame.tags | length) %}
+                    <span class="tag {{ frame.tag_classes[i] }}">{{ frame.tags[i] }}</span>
+                    {% endfor %}
+                  </div>
+                  <div class="frame-coord">클릭 좌표: <em>({{ frame.x }}, {{ frame.y }})</em></div>
+                  <div class="frame-desc">{{ frame.desc }}</div>
+                  <div class="frame-score">candidate_score: <strong>{{ frame.score }}</strong></div>
+                </div>
+              </div>
             </div>
+            {% endfor %}
           </div>
         </div>
         {% endfor %}
@@ -782,7 +881,10 @@
       var img = wrap.querySelector('img');
       if (!img) return;
 
-      // Load image to get natural dimensions
+      // Use original file from frames/ if available, otherwise fallback to thumbnail
+      var originalPath = wrap.getAttribute('data-original');
+      var src = originalPath || img.src;
+
       var probe = new Image();
       probe.onload = function() {
         var natW = probe.naturalWidth;
@@ -790,8 +892,6 @@
         var vw = window.innerWidth * 0.98;
         var vh = window.innerHeight * 0.98;
 
-        // If image is larger than viewport, constrain to viewport
-        // Otherwise, show at original size
         if (natW > vw || natH > vh) {
           modalImg.style.width = '';
           modalImg.style.height = '';
@@ -804,10 +904,19 @@
           modalImg.style.maxHeight = '';
         }
 
+        modalImg.src = src;
+        modal.classList.add('active');
+      };
+      probe.onerror = function() {
+        // Original not found, fallback to thumbnail
+        modalImg.style.maxWidth = '98vw';
+        modalImg.style.maxHeight = '98vh';
+        modalImg.style.width = '';
+        modalImg.style.height = '';
         modalImg.src = img.src;
         modal.classList.add('active');
       };
-      probe.src = img.src;
+      probe.src = src;
     });
   });
 
