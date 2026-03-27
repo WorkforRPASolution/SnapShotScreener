@@ -1,6 +1,7 @@
 """Command-line interface for SnapshotScreener.
 
 Full argparse CLI matching PRD Section 6.
+Supports YAML config file via ``--config`` with CLI overrides.
 """
 from __future__ import annotations
 
@@ -9,7 +10,10 @@ import os
 import sys
 import warnings
 from datetime import date, datetime
-from typing import List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 from snapshot_screener.config import ScreenerConfig
 from snapshot_screener.utils.progress import get_logger, setup_logging
@@ -69,8 +73,16 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         description="SnapshotScreener — 자동화 스크린샷 분석 도구",
     )
 
+    # ---- Config file ----
+    parser.add_argument(
+        "--config",
+        type=str,
+        metavar="FILE",
+        help="YAML 설정 파일 경로 (CLI 인자가 config 값을 오버라이드)",
+    )
+
     # ---- Required: mutually exclusive eqpid group ----
-    eqpid_group = parser.add_mutually_exclusive_group(required=True)
+    eqpid_group = parser.add_mutually_exclusive_group(required=False)
     eqpid_group.add_argument(
         "--eqpid",
         type=str,
@@ -87,7 +99,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--from",
         type=_parse_date,
-        required=True,
+        required=False,
         dest="date_from",
         metavar="YYYY-MM-DD",
         help="분석 시작 날짜",
@@ -95,7 +107,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--to",
         type=_parse_date,
-        required=True,
+        required=False,
         dest="date_to",
         metavar="YYYY-MM-DD",
         help="분석 종료 날짜",
@@ -105,19 +117,19 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--db-host",
         type=str,
-        required=True,
+        required=False,
         help="Cassandra 호스트",
     )
     parser.add_argument(
         "--db-keyspace",
         type=str,
-        required=True,
+        required=False,
         help="Cassandra 키스페이스",
     )
     parser.add_argument(
         "--db-table",
         type=str,
-        required=True,
+        required=False,
         help="Cassandra 테이블 이름",
     )
 
@@ -254,67 +266,134 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="디버그 로깅 활성화",
     )
 
-    return parser.parse_args(argv)
+    return parser.parse_args(argv), parser
 
 
-def build_config(args: argparse.Namespace) -> ScreenerConfig:
-    """Transform parsed CLI arguments into a frozen :class:`ScreenerConfig`.
+def _load_yaml_config(path: str) -> Dict[str, Any]:
+    """Load a YAML config file and return a flat dict of settings."""
+    p = Path(path)
+    if not p.exists():
+        raise argparse.ArgumentTypeError(f"설정 파일을 찾을 수 없습니다: {path!r}")
+    with open(p, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise argparse.ArgumentTypeError(f"설정 파일이 올바른 YAML이 아닙니다: {path!r}")
+    return data
+
+
+def _merge_config(yaml_cfg: Dict[str, Any], args: argparse.Namespace, parser: argparse.ArgumentParser) -> Dict[str, Any]:
+    """Merge YAML config with CLI args.  CLI args override YAML values.
+
+    Only CLI args that were explicitly provided by the user override YAML.
+    Default values from argparse do NOT override YAML.
+    """
+    merged = dict(yaml_cfg)
+
+    # Detect which CLI args were explicitly provided (not defaults)
+    defaults = {k: v for k, v in vars(parser.parse_args([])).items() if k != "config"}
+
+    for key, cli_val in vars(args).items():
+        if key == "config":
+            continue
+        # CLI overrides YAML only if explicitly provided (different from default)
+        if cli_val != defaults.get(key):
+            merged[key] = cli_val
+
+    return merged
+
+
+def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = None) -> ScreenerConfig:
+    """Transform parsed CLI arguments (optionally merged with YAML) into a frozen :class:`ScreenerConfig`.
 
     Parameters
     ----------
     args:
         Namespace from :func:`parse_args`.
+    parser:
+        The ArgumentParser instance (needed to detect explicit CLI overrides).
 
     Returns
     -------
     ScreenerConfig
     """
-    # Resolve equipment IDs
-    if args.eqpid:
-        eqpids = [args.eqpid]
+    # Load YAML if provided
+    if args.config:
+        yaml_cfg = _load_yaml_config(args.config)
+        if parser is not None:
+            cfg = _merge_config(yaml_cfg, args, parser)
+        else:
+            cfg = yaml_cfg
     else:
-        eqpids = _read_eqpid_list(args.eqpid_list)
+        cfg = vars(args)
 
-    # Resolve password: CLI > environment variable
-    db_password = args.db_password
-    if db_password is not None:
+    # Resolve equipment IDs
+    eqpid = cfg.get("eqpid")
+    eqpid_list = cfg.get("eqpid_list")
+    eqpids_raw = cfg.get("eqpids")  # YAML can specify as list directly
+
+    if eqpids_raw and isinstance(eqpids_raw, list):
+        eqpids = eqpids_raw
+    elif eqpid:
+        eqpids = [eqpid]
+    elif eqpid_list:
+        eqpids = _read_eqpid_list(eqpid_list)
+    else:
+        raise ValueError("장비 ID가 지정되지 않았습니다 (--eqpid, --eqpid-list, 또는 config의 eqpids 필요)")
+
+    # Resolve dates (YAML may provide as string)
+    date_from = cfg.get("date_from")
+    date_to = cfg.get("date_to")
+    if isinstance(date_from, str):
+        date_from = datetime.strptime(date_from, "%Y-%m-%d").date()
+    if isinstance(date_to, str):
+        date_to = datetime.strptime(date_to, "%Y-%m-%d").date()
+    if date_from is None or date_to is None:
+        raise ValueError("분석 기간이 지정되지 않았습니다 (--from/--to 또는 config의 date_from/date_to 필요)")
+
+    # Resolve password: CLI > YAML > environment variable
+    db_password = cfg.get("db_password")
+    if db_password is not None and getattr(args, "db_password", None) is not None:
         warnings.warn(
             "비밀번호를 명령줄 인수로 전달하는 것은 안전하지 않습니다. "
             "SS_DB_PASSWORD 환경변수를 사용하세요.",
             SecurityWarning,
             stacklevel=2,
         )
-    else:
+    if db_password is None:
         db_password = os.environ.get("SS_DB_PASSWORD")
+
+    db_host = cfg.get("db_host")
+    if not db_host:
+        raise ValueError("Cassandra 호스트가 지정되지 않았습니다 (--db-host 또는 config의 db_host 필요)")
 
     return ScreenerConfig(
         eqpids=eqpids,
-        date_from=args.date_from,
-        date_to=args.date_to,
-        db_host=args.db_host,
-        db_port=args.db_port,
-        db_keyspace=args.db_keyspace,
-        db_table=args.db_table,
-        db_username=args.db_username,
+        date_from=date_from,
+        date_to=date_to,
+        db_host=db_host,
+        db_port=cfg.get("db_port", 9042),
+        db_keyspace=cfg.get("db_keyspace", ""),
+        db_table=cfg.get("db_table", ""),
+        db_username=cfg.get("db_username"),
         db_password=db_password,
-        read_delay_ms=args.read_delay_ms,
-        fname_delay_ms=args.fname_delay_ms,
-        max_connections=args.max_connections,
-        session_gap_ms=args.session_gap_ms,
-        phash_similar_threshold=args.phash_similar_threshold,
-        phash_transition_threshold=args.phash_transition_threshold,
-        delta_spike_ms=args.delta_spike_ms,
-        dbscan_eps=args.dbscan_eps,
-        dbscan_min_samples=args.dbscan_min_samples,
-        screen_width=args.screen_width,
-        screen_height=args.screen_height,
-        selector=args.selector,
-        sensitivity_sweep=args.sensitivity_sweep,
-        fname_pattern=args.fname_pattern,
-        cache_dir=args.cache_dir,
-        output_dir=args.output_dir,
-        invalidate_cache=args.invalidate_cache,
-        verbose=args.verbose,
+        read_delay_ms=cfg.get("read_delay_ms", 200),
+        fname_delay_ms=cfg.get("fname_delay_ms", 100),
+        max_connections=cfg.get("max_connections", 2),
+        session_gap_ms=cfg.get("session_gap_ms", 900_000),
+        phash_similar_threshold=cfg.get("phash_similar_threshold", 4),
+        phash_transition_threshold=cfg.get("phash_transition_threshold", 8),
+        delta_spike_ms=cfg.get("delta_spike_ms", 30_000),
+        dbscan_eps=cfg.get("dbscan_eps", 0.03),
+        dbscan_min_samples=cfg.get("dbscan_min_samples", 2),
+        screen_width=cfg.get("screen_width", 1920),
+        screen_height=cfg.get("screen_height", 1080),
+        selector=cfg.get("selector", "simple"),
+        sensitivity_sweep=cfg.get("sensitivity_sweep", False),
+        fname_pattern=cfg.get("fname_pattern", "auto"),
+        cache_dir=cfg.get("cache_dir", "."),
+        output_dir=cfg.get("output_dir", "."),
+        invalidate_cache=cfg.get("invalidate_cache", False),
+        verbose=cfg.get("verbose", False),
     )
 
 
@@ -334,11 +413,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Lazy import to avoid circular dependency at module level
     from snapshot_screener.pipeline import run_pipeline
 
-    args = parse_args(argv)
+    args, parser = parse_args(argv)
     setup_logging(args.verbose)
 
     try:
-        config = build_config(args)
+        config = build_config(args, parser)
     except (ValueError, argparse.ArgumentTypeError) as e:
         logger.error(f"설정 오류: {e}")
         return 1

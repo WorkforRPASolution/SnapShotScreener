@@ -163,7 +163,7 @@ class TestParseArgs:
     """Tests for parse_args()."""
 
     def test_minimal_args(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -180,7 +180,7 @@ class TestParseArgs:
         assert args.db_table == "my_tbl"
 
     def test_defaults(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -211,7 +211,7 @@ class TestParseArgs:
     def test_eqpid_list_flag(self, tmp_path):
         eqpid_file = tmp_path / "eqpids.txt"
         eqpid_file.write_text("EQ-01\nEQ-02\nEQ-03\n")
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid-list", str(eqpid_file),
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -237,8 +237,10 @@ class TestParseArgs:
             ])
 
     def test_missing_required(self):
-        with pytest.raises(SystemExit):
-            parse_args(["--eqpid", "EQ-01"])
+        """Missing required fields raises ValueError in build_config."""
+        args, parser = parse_args(["--eqpid", "EQ-01"])
+        with pytest.raises(ValueError):
+            build_config(args, parser)
 
     def test_invalid_date_format(self):
         with pytest.raises(SystemExit):
@@ -264,7 +266,7 @@ class TestParseArgs:
             ])
 
     def test_all_optional_args(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -325,7 +327,7 @@ class TestBuildConfig:
     """Tests for build_config()."""
 
     def test_single_eqpid(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -342,7 +344,7 @@ class TestBuildConfig:
     def test_eqpid_list_file(self, tmp_path):
         eqpid_file = tmp_path / "eqpids.txt"
         eqpid_file.write_text("EQ-01\nEQ-02\nEQ-03\n")
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid-list", str(eqpid_file),
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -355,7 +357,7 @@ class TestBuildConfig:
 
     def test_password_from_env(self, monkeypatch):
         monkeypatch.setenv("SS_DB_PASSWORD", "env_secret")
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -367,7 +369,7 @@ class TestBuildConfig:
         assert config.db_password == "env_secret"
 
     def test_password_cli_warns(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",
@@ -381,7 +383,7 @@ class TestBuildConfig:
         assert config.db_password == "cli_secret"
 
     def test_frozen_config(self):
-        args = parse_args([
+        args, _ = parse_args([
             "--eqpid", "EQ-01",
             "--from", "2024-01-01",
             "--to", "2024-01-31",

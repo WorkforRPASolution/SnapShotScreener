@@ -15,6 +15,7 @@ dependencies = [
     "numpy",
     "jinja2",
     "matplotlib",
+    "PyYAML",
 ]
 
 [project.scripts]

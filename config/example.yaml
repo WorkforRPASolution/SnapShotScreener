@@ -1,0 +1,45 @@
+# SnapshotScreener 설정 파일 예시
+# 사용법: snapshot-screener --config config/example.yaml
+
+# ---- 분석 대상 ----
+eqpid: EQ-2471                    # 단일 장비
+# eqpids:                         # 복수 장비 (eqpid 대신 사용)
+#   - EQ-2471
+#   - EQ-2472
+#   - EQ-2473
+# eqpid_list: eqpids.txt          # 또는 파일 경로
+
+date_from: "2026-03-11"
+date_to: "2026-03-25"
+
+# ---- Cassandra ----
+db_host: 10.0.1.50
+db_port: 9042
+db_keyspace: factory
+db_table: snapshots
+db_username: null                  # 인증 불필요 시 null
+db_password: null                  # 또는 SS_DB_PASSWORD 환경변수 사용
+
+# ---- Cassandra 보호 ----
+read_delay_ms: 200                 # 이미지 쿼리 간격 (ms)
+fname_delay_ms: 100                # fname 쿼리 간격 (ms)
+max_connections: 2
+
+# ---- 분석 파라미터 ----
+session_gap_ms: 900000             # 세션 분리 gap (15분)
+phash_similar_threshold: 4         # 같은 화면 판정 임계값
+phash_transition_threshold: 8      # 화면 전환 판정 임계값
+delta_spike_ms: 30000              # 시간 스파이크 임계값
+dbscan_eps: 0.03                   # DBSCAN epsilon
+dbscan_min_samples: 2              # DBSCAN 최소 샘플
+screen_width: 1920                 # 화면 해상도 (좌표 정규화용)
+screen_height: 1080
+selector: simple                   # simple | scored
+sensitivity_sweep: false           # true로 설정 시 레이어 C 분석
+fname_pattern: auto                # auto | xy_ts | ts_xy | 커스텀 정규식
+
+# ---- 출력 ----
+cache_dir: "."
+output_dir: "./output"
+invalidate_cache: false
+verbose: false
