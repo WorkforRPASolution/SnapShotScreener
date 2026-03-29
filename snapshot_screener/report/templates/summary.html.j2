@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="{{ lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SnapshotScreener 종합 요약 리포트</title>
+<title>{{ labels.summary_title }}</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -252,19 +252,19 @@
 
 <div class="report-header">
   <div class="inner">
-    <h1>SnapshotScreener 종합 요약 리포트</h1>
-    <div class="subtitle">Multi-Equipment Summary Report</div>
+    <h1>{{ labels.summary_title }}</h1>
+    <div class="subtitle">{{ labels.summary_subtitle }}</div>
     <div class="report-meta">
       <div class="meta-chip">
-        <span class="label">분석 장비 수</span>
+        <span class="label">{{ labels.summary_meta_equipment_count }}</span>
         <span class="value">{{ equipment_count }}</span>
       </div>
       <div class="meta-chip">
-        <span class="label">분석 기간</span>
+        <span class="label">{{ labels.summary_meta_period }}</span>
         <span class="value">{{ date_from }} ~ {{ date_to }}</span>
       </div>
       <div class="meta-chip">
-        <span class="label">생성 일시</span>
+        <span class="label">{{ labels.summary_meta_generated }}</span>
         <span class="value">{{ generated_at }}</span>
       </div>
       <div class="meta-chip">
@@ -279,19 +279,19 @@
 
   <!-- Section 1: Aggregate -->
   <div class="section">
-    <h2 class="section-title"><span class="num">1</span> 판정 요약</h2>
+    <h2 class="section-title"><span class="num">1</span> {{ labels.summary_section_verdict_summary }}</h2>
     <div class="summary-grid">
       <div class="summary-card">
-        <div class="card-label">높음</div>
-        <div class="card-value highlight-green">{{ high_count }}<span class="card-unit">대</span></div>
+        <div class="card-label">{{ labels.summary_card_high }}</div>
+        <div class="card-value highlight-green">{{ high_count }}<span class="card-unit">{{ labels.summary_card_unit }}</span></div>
       </div>
       <div class="summary-card">
-        <div class="card-label">중간</div>
-        <div class="card-value highlight-amber">{{ medium_count }}<span class="card-unit">대</span></div>
+        <div class="card-label">{{ labels.summary_card_medium }}</div>
+        <div class="card-value highlight-amber">{{ medium_count }}<span class="card-unit">{{ labels.summary_card_unit }}</span></div>
       </div>
       <div class="summary-card">
-        <div class="card-label">낮음</div>
-        <div class="card-value highlight-red">{{ low_count }}<span class="card-unit">대</span></div>
+        <div class="card-label">{{ labels.summary_card_low }}</div>
+        <div class="card-value highlight-red">{{ low_count }}<span class="card-unit">{{ labels.summary_card_unit }}</span></div>
       </div>
     </div>
   </div>
@@ -299,9 +299,9 @@
   <!-- Section 2: Highlighted equipment -->
   {% if high_eqpids %}
   <div class="section">
-    <h2 class="section-title"><span class="num">2</span> 패턴 가능성 높은 장비</h2>
+    <h2 class="section-title"><span class="num">2</span> {{ labels.summary_section_high_equipment }}</h2>
     <div class="highlight-block">
-      <h3>Vision AI 투입 대상 권장 ({{ high_eqpids | length }}대)</h3>
+      <h3>{{ labels.summary_high_recommendation | replace('{count}', high_eqpids|length|string) }}</h3>
       <div class="eqpid-list">
         {% for eq in high_eqpids %}
         {{ eq }}{% if not loop.last %}, {% endif %}
@@ -313,18 +313,18 @@
 
   <!-- Section 3: Comparison Table -->
   <div class="section">
-    <h2 class="section-title"><span class="num">3</span> 장비 비교 테이블</h2>
+    <h2 class="section-title"><span class="num">3</span> {{ labels.summary_section_comparison }}</h2>
     <table class="comparison-table">
       <thead>
         <tr>
-          <th>장비 ID</th>
-          <th>분석 일수</th>
-          <th>총 클릭</th>
-          <th>집중도</th>
-          <th>CV</th>
-          <th>유사도</th>
-          <th>판정</th>
-          <th>리포트</th>
+          <th>{{ labels.summary_table_eqpid }}</th>
+          <th>{{ labels.summary_table_days }}</th>
+          <th>{{ labels.summary_table_clicks }}</th>
+          <th>{{ labels.summary_table_concentration }}</th>
+          <th>{{ labels.summary_table_cv }}</th>
+          <th>{{ labels.summary_table_similarity }}</th>
+          <th>{{ labels.summary_table_verdict }}</th>
+          <th>{{ labels.summary_table_report }}</th>
         </tr>
       </thead>
       <tbody>
@@ -337,7 +337,7 @@
           <td>{% if row.session_cv is not none %}{{ "%.2f"|format(row.session_cv) }}{% else %}-{% endif %}</td>
           <td>{% if row.sequence_similarity is not none %}{{ "%.2f"|format(row.sequence_similarity) }}{% else %}-{% endif %}</td>
           <td><span class="verdict-badge {{ row.verdict_class }}">{{ row.verdict }}</span></td>
-          <td><a href="{{ row.report_link }}">상세 리포트</a></td>
+          <td><a href="{{ row.report_link }}">{{ labels.summary_detail_link }}</a></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -347,7 +347,7 @@
 </div>
 
 <div class="report-footer">
-  대표 스냅샷 추출기 {{ version }} &middot; 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
+  {{ labels.summary_footer | replace('{version}', version) }}
 </div>
 
 </body>

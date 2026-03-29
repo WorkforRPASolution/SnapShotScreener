@@ -211,23 +211,23 @@ class TestSequenceSimilarity:
 
 class TestVerdict:
     def test_high_verdict(self):
-        """High pattern data should yield '높음'."""
+        """High pattern data should yield 'high'."""
         features = _make_high_pattern_features()
         result = compute_screening(features)
-        assert result.verdict == "높음"
+        assert result.verdict == "high"
 
     def test_low_verdict(self):
-        """Low pattern data should yield '낮음'."""
+        """Low pattern data should yield 'low'."""
         features = _make_low_pattern_features()
         result = compute_screening(features)
-        assert result.verdict == "낮음"
+        assert result.verdict == "low"
 
     def test_all_insufficient_yields_medium(self):
-        """When all signals are insufficient, default to '중간'."""
+        """When all signals are insufficient, default to 'medium'."""
         # < 10 frames, 1 session → all insufficient
         features = [_make_feature(session_id="S0") for _ in range(5)]
         result = compute_screening(features)
-        assert result.verdict == "중간"
+        assert result.verdict == "medium"
 
 
 # ---------------------------------------------------------------------------

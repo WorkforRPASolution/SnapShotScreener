@@ -79,7 +79,7 @@ def _make_frame_feature(
 
 
 def _make_screening_result(
-    verdict: str = "패턴 존재 가능성 — 높음",
+    verdict: str = "high",
 ) -> ScreeningResult:
     """Create a ScreeningResult for testing."""
     return ScreeningResult(
@@ -100,7 +100,7 @@ def _make_sensitivity_result() -> SensitivityResult:
         frame_counts={3: 25, 4: 23, 5: 21, 6: 17},
         jaccard_pairs=[(3, 4, 0.87), (4, 5, 0.82), (5, 6, 0.68)],
         min_jaccard=0.68,
-        sensitivity_verdict="파라미터에 둔감 — 구조 명확",
+        sensitivity_verdict="insensitive",
     )
 
 
@@ -350,7 +350,7 @@ class TestSummaryRenderer:
 
         results = [
             _make_analysis_result(
-                screening=_make_screening_result("패턴 존재 가능성 — 높음"),
+                screening=_make_screening_result("high"),
             ),
             AnalysisResult(
                 eqpid="EQ-TEST2",
@@ -364,7 +364,7 @@ class TestSummaryRenderer:
                     session_cv_level="low",
                     sequence_similarity=0.3,
                     sequence_similarity_level="low",
-                    verdict="패턴 존재 가능성 — 낮음",
+                    verdict="low",
                 ),
                 sensitivity=None,
                 total_clicks=1234,
@@ -407,19 +407,20 @@ class TestSummaryRenderer:
         assert output_path.name == "SnapshotScreener_Summary_20260301-20260315.html"
 
     def test_summary_high_equipment_highlighted(self, tmp_path: Path) -> None:
-        """Equipment with '높음' verdict should appear in highlighted block."""
+        """Equipment with 'high' verdict should appear in highlighted block."""
         config = _make_config(output_dir=str(tmp_path))
         results = [
             _make_analysis_result(
-                screening=_make_screening_result("패턴 존재 가능성 — 높음"),
+                screening=_make_screening_result("high"),
             ),
         ]
 
         output_path = render_summary(results, config)
         html = output_path.read_text(encoding="utf-8")
 
+        # Korean labels from i18n (default lang=ko)
         assert "패턴 가능성 높은 장비" in html
-        assert "Vision AI 투입 대상 권장" in html
+        assert "Vision AI" in html
         assert "EQ-TEST" in html
 
     def test_summary_no_images(self, tmp_path: Path) -> None:

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="{{ lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SnapshotScreener 분석 리포트 — {{ eqpid }}</title>
+<title>{{ labels.report_title }} — {{ eqpid }}</title>
 <style>
   :root {
     --bg: #f8f9fc;
@@ -635,19 +635,19 @@
 
 <div class="report-header">
   <div class="inner">
-    <h1>SnapshotScreener 분석 리포트</h1>
-    <div class="subtitle">SnapshotScreener Analysis Report</div>
+    <h1>{{ labels.report_title }}</h1>
+    <div class="subtitle">{{ labels.report_subtitle }}</div>
     <div class="report-meta">
       <div class="meta-chip">
-        <span class="label">장비 ID</span>
+        <span class="label">{{ labels.report_meta_eqpid }}</span>
         <span class="value">{{ eqpid }}</span>
       </div>
       <div class="meta-chip">
-        <span class="label">분석 기간</span>
+        <span class="label">{{ labels.report_meta_period }}</span>
         <span class="value">{{ date_from }} ~ {{ date_to }}</span>
       </div>
       <div class="meta-chip">
-        <span class="label">생성 일시</span>
+        <span class="label">{{ labels.report_meta_generated }}</span>
         <span class="value">{{ generated_at }}</span>
       </div>
       <div class="meta-chip">
@@ -662,7 +662,7 @@
 
   <!-- Section 1: Verdict (moved to top) -->
   <div class="section">
-    <h2 class="section-title"><span class="num">1</span> 종합 판정</h2>
+    <h2 class="section-title"><span class="num">1</span> {{ labels.report_section_verdict }}</h2>
     <div class="verdict-box">
       <div class="verdict-icon {% if verdict_color == 'green' %}positive{% elif verdict_color == 'amber' %}caution{% else %}negative{% endif %}">{% if verdict_color == 'green' %}&#x2713;{% elif verdict_color == 'amber' %}&#x26A0;{% else %}&#x2717;{% endif %}</div>
       <div class="verdict-title highlight-{{ verdict_color }}">{{ verdict }}</div>
@@ -672,30 +672,30 @@
 
   <!-- Section 2: Summary -->
   <div class="section">
-    <h2 class="section-title"><span class="num">2</span> 장비 요약</h2>
+    <h2 class="section-title"><span class="num">2</span> {{ labels.report_section_summary }}</h2>
     <div class="summary-grid">
       <div class="summary-card">
-        <div class="card-label">총 클릭 수</div>
+        <div class="card-label">{{ labels.report_card_total_clicks }}</div>
         <div class="card-value">{{ "{:,}".format(total_clicks) }}</div>
       </div>
       <div class="summary-card">
-        <div class="card-label">분석 일수</div>
-        <div class="card-value">{{ analysis_days }}<span class="card-unit">일</span></div>
+        <div class="card-label">{{ labels.report_card_analysis_days }}</div>
+        <div class="card-value">{{ analysis_days }}<span class="card-unit">{{ labels.report_card_days_unit }}</span></div>
       </div>
       <div class="summary-card">
-        <div class="card-label">세션 수</div>
+        <div class="card-label">{{ labels.report_card_sessions }}</div>
         <div class="card-value">{{ "{:,}".format(session_count) }}</div>
       </div>
       <div class="summary-card">
-        <div class="card-label">화면 그룹</div>
+        <div class="card-label">{{ labels.report_card_screen_groups }}</div>
         <div class="card-value">{{ screen_group_count }}</div>
       </div>
       <div class="summary-card">
-        <div class="card-label">대표 프레임</div>
+        <div class="card-label">{{ labels.report_card_representative_frames }}</div>
         <div class="card-value highlight-accent">{{ representative_count }}</div>
       </div>
       <div class="summary-card">
-        <div class="card-label">데이터 축소율</div>
+        <div class="card-label">{{ labels.report_card_reduction_rate }}</div>
         <div class="card-value highlight-green">{{ "%.1f"|format(reduction_rate) }}<span class="card-unit">%</span></div>
       </div>
     </div>
@@ -703,16 +703,16 @@
 
   <!-- Section 3: Representative Frames (grouped by pattern) -->
   <div class="section">
-    <h2 class="section-title"><span class="num">3</span> 대표 프레임 시퀀스</h2>
+    <h2 class="section-title"><span class="num">3</span> {{ labels.report_section_frames }}</h2>
 
     {% if pattern_groups %}
     {% for group in pattern_groups %}
     <div class="pattern-group{% if loop.first %} open{% endif %}">
       <div class="pattern-header" onclick="this.parentElement.classList.toggle('open')">
         <div>
-          <span class="pattern-label">패턴 {{ loop.index }}</span>
+          <span class="pattern-label">{{ labels.report_pattern_label | replace('{index}', loop.index|string) }}</span>
           <span class="pattern-sequence">{{ group.pattern }}</span>
-          <span class="pattern-count">({{ group.count }}개 세션)</span>
+          <span class="pattern-count">{{ labels.report_session_count | replace('{count}', group.count|string) }}</span>
         </div>
         <span class="pattern-toggle">&#9660;</span>
       </div>
@@ -725,9 +725,9 @@
               <span class="session-id">{{ session.id }}</span>
             </div>
             <div class="session-stats">
-              <span>클릭 {{ session.click_count }}회</span>
+              <span>{{ labels.report_clicks_count | replace('{count}', session.click_count|string) }}</span>
               <span>{{ session.time_range }}</span>
-              <span>대표 프레임 {{ session.frame_count }}개</span>
+              <span>{{ labels.report_rep_frames_count | replace('{count}', session.frame_count|string) }}</span>
             </div>
           </div>
           <div class="frame-sequence">
@@ -743,7 +743,7 @@
                   <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
                   <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
                   {% else %}
-                  <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px;">이미지 없음</div>
+                  <div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--text-muted);font-size:13px;">{{ labels.report_no_image }}</div>
                   {% endif %}
                 </div>
                 <div class="frame-info">
@@ -753,7 +753,7 @@
                     <span class="tag {{ frame.tag_classes[i] }}">{{ frame.tags[i] }}</span>
                     {% endfor %}
                   </div>
-                  <div class="frame-coord">클릭 좌표: <em>({{ frame.x }}, {{ frame.y }})</em></div>
+                  <div class="frame-coord">{{ labels.report_click_coord }} <em>({{ frame.x }}, {{ frame.y }})</em></div>
                   <div class="frame-desc">{{ frame.desc }}</div>
                   <div class="frame-score">candidate_score: <strong>{{ frame.score }}</strong></div>
                 </div>
@@ -767,17 +767,17 @@
     </div>
     {% endfor %}
     {% else %}
-    <div class="empty-state">대표 프레임이 선택되지 않았습니다</div>
+    <div class="empty-state">{{ labels.report_no_frames }}</div>
     {% endif %}
   </div>
 
   <!-- Section 4: Pattern Screening Signals -->
   <div class="section">
-    <h2 class="section-title"><span class="num">4</span> 패턴 스크리닝 신호 (레이어 B)</h2>
+    <h2 class="section-title"><span class="num">4</span> {{ labels.report_section_signals }}</h2>
     <div class="signals-grid">
       {% if screening.click_concentration is not none %}
       <div class="signal-card">
-        <div class="signal-label">클릭 좌표 집중도</div>
+        <div class="signal-label">{{ labels.report_signal_click_concentration }}</div>
         <div class="signal-value-row">
           <div class="signal-value highlight-{{ screening.click_concentration_color }}">{{ "%.1f"|format(screening.click_concentration * 100) }}</div>
           <div class="signal-unit">%</div>
@@ -788,7 +788,7 @@
       {% endif %}
       {% if screening.session_cv is not none %}
       <div class="signal-card">
-        <div class="signal-label">세션 길이 변동계수 (CV)</div>
+        <div class="signal-label">{{ labels.report_signal_session_cv }}</div>
         <div class="signal-value-row">
           <div class="signal-value highlight-{{ screening.session_cv_color }}">{{ "%.2f"|format(screening.session_cv) }}</div>
         </div>
@@ -798,7 +798,7 @@
       {% endif %}
       {% if screening.sequence_similarity is not none %}
       <div class="signal-card">
-        <div class="signal-label">세션 간 화면 시퀀스 유사도 (LCS)</div>
+        <div class="signal-label">{{ labels.report_signal_sequence_similarity }}</div>
         <div class="signal-value-row">
           <div class="signal-value highlight-{{ screening.sequence_similarity_color }}">{{ "%.2f"|format(screening.sequence_similarity) }}</div>
         </div>
@@ -811,7 +811,7 @@
 
   <!-- Section 5: Parameter Sensitivity -->
   <div class="section">
-    <h2 class="section-title"><span class="num">5</span> 파라미터 민감도 분석 (레이어 C)</h2>
+    <h2 class="section-title"><span class="num">5</span> {{ labels.report_section_sensitivity }}</h2>
     {% if sensitivity is not none %}
     <div class="session-block">
       <div class="session-header">
@@ -821,10 +821,10 @@
         <table class="sensitivity-table">
           <thead>
             <tr>
-              <th>Threshold 쌍</th>
-              <th>대표 프레임 수</th>
-              <th>Jaccard 유사도</th>
-              <th>판정</th>
+              <th>{{ labels.report_sensitivity_threshold_pair }}</th>
+              <th>{{ labels.report_sensitivity_frame_count }}</th>
+              <th>{{ labels.report_sensitivity_jaccard }}</th>
+              <th>{{ labels.report_sensitivity_verdict }}</th>
             </tr>
           </thead>
           <tbody>
@@ -834,41 +834,41 @@
               <td>{{ sensitivity.frame_counts.get(pair[0], "?") }} / {{ sensitivity.frame_counts.get(pair[1], "?") }}</td>
               {% if pair[2] >= 0.7 %}
               <td style="color:var(--green)">{{ "%.2f"|format(pair[2]) }}</td>
-              <td><span class="signal-verdict verdict-high">안정</span></td>
+              <td><span class="signal-verdict verdict-high">{{ labels.report_sensitivity_stable }}</span></td>
               {% elif pair[2] >= 0.4 %}
               <td style="color:var(--amber)">{{ "%.2f"|format(pair[2]) }}</td>
-              <td><span class="signal-verdict verdict-mid">중간</span></td>
+              <td><span class="signal-verdict verdict-mid">{{ labels.report_sensitivity_moderate }}</span></td>
               {% else %}
               <td style="color:var(--red)">{{ "%.2f"|format(pair[2]) }}</td>
-              <td><span class="signal-verdict verdict-low">불안정</span></td>
+              <td><span class="signal-verdict verdict-low">{{ labels.report_sensitivity_unstable }}</span></td>
               {% endif %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
         <div style="margin-top:16px;">
-          <div class="signal-label">최소 Jaccard 유사도</div>
+          <div class="signal-label">{{ labels.report_sensitivity_min_jaccard }}</div>
           <div class="signal-value-row">
             <div class="signal-value highlight-green" style="font-size:24px">{{ "%.2f"|format(sensitivity.min_jaccard) }}</div>
           </div>
-          <span class="signal-verdict {% if sensitivity.min_jaccard >= 0.7 %}verdict-high{% elif sensitivity.min_jaccard >= 0.4 %}verdict-mid{% else %}verdict-low{% endif %}">{{ sensitivity.sensitivity_verdict }}</span>
+          <span class="signal-verdict {% if sensitivity.min_jaccard >= 0.7 %}verdict-high{% elif sensitivity.min_jaccard >= 0.4 %}verdict-mid{% else %}verdict-low{% endif %}">{{ labels["sensitivity_" + sensitivity.sensitivity_verdict] }}</span>
         </div>
       </div>
     </div>
     {% else %}
-    <div class="empty-state">민감도 분석이 비활성화되어 있습니다</div>
+    <div class="empty-state">{{ labels.report_sensitivity_disabled }}</div>
     {% endif %}
   </div>
 
 </div>
 
 <div class="report-footer">
-  대표 스냅샷 추출기 {{ version }} &middot; 이 리포트는 SnapshotScreener에 의해 자동 생성되었으며, 최종 판단은 사람이 대표 프레임을 육안 검토한 후 확정해야 합니다.
+  {{ labels.report_footer | replace('{version}', version) }}
 </div>
 
 <!-- Image zoom modal -->
 <div class="img-modal-overlay" id="imgModal">
-  <img id="imgModalContent" src="" alt="확대 보기">
+  <img id="imgModalContent" src="" alt="{{ labels.report_zoom_alt }}">
 </div>
 
 <script>

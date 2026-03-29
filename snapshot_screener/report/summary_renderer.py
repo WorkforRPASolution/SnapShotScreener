@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from snapshot_screener import __version__
 from snapshot_screener.config import ScreenerConfig
+from snapshot_screener.i18n import t, get_labels
 from snapshot_screener.models import AnalysisResult
 from snapshot_screener.report.renderer import _get_template_dir
 
@@ -20,13 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def _verdict_to_class(verdict: str) -> str:
-    """Map verdict string to CSS class."""
-    v = verdict.lower()
-    if "높음" in v or "high" in v:
-        return "high"
-    elif "중간" in v or "medium" in v:
-        return "medium"
-    return "low"
+    """Map verdict internal key to CSS class."""
+    return {"high": "high", "medium": "medium", "low": "low"}.get(verdict, "medium")
 
 
 def render_summary(
@@ -84,11 +80,13 @@ def render_summary(
                 "click_concentration": r.screening.click_concentration,
                 "session_cv": r.screening.session_cv,
                 "sequence_similarity": r.screening.sequence_similarity,
-                "verdict": r.screening.verdict,
+                "verdict": t("verdict." + r.screening.verdict, config.lang),
                 "verdict_class": verdict_class,
                 "report_link": report_link,
             }
         )
+
+    labels = get_labels(config.lang)
 
     context = {
         "equipment_count": len(results),
@@ -101,6 +99,8 @@ def render_summary(
         "low_count": low_count,
         "high_eqpids": high_eqpids,
         "comparison_rows": comparison_rows,
+        "lang": config.lang,
+        "labels": labels,
     }
 
     html = template.render(**context)

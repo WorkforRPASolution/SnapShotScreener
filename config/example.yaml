@@ -54,4 +54,7 @@ fname_pattern: auto                # auto | 커스텀 정규식
 cache_dir: "."                     # pHash 캐시 SQLite 저장 위치
 output_dir: "./output"             # HTML 리포트 + JSON + 원본 프레임 출력 위치
 invalidate_cache: false            # true: 기존 캐시 삭제 후 재계산
-verbose: false                     # true: DEBUG 레벨 로깅
+verbose: false
+
+# ---- 출력 언어 ----
+lang: ko                           # ko (한국어) | en (English)                     # true: DEBUG 레벨 로깅

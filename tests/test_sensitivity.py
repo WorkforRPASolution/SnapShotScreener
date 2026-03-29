@@ -107,7 +107,7 @@ class TestStableData:
         features = _make_stable_features()
         result = run_sensitivity_sweep(features, thresholds=[3, 4, 5, 6])
 
-        assert result.sensitivity_verdict == "둔감"
+        assert result.sensitivity_verdict == "insensitive"
         assert result.min_jaccard > 0.8
 
     def test_threshold_values_stored(self):
@@ -165,7 +165,7 @@ class TestUnstableData:
         # With thresholds at [2,3,4,7], groupings should change significantly
         # At threshold 2: base, h3, h4, h_far are all separate groups
         # At threshold 7: base+h3+h4 merge, h_far separate
-        assert result.sensitivity_verdict in ("민감", "중간")
+        assert result.sensitivity_verdict in ("sensitive", "moderate")
 
 
 class TestAllPairsPresent:

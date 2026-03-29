@@ -48,6 +48,9 @@ class ScreenerConfig:
     invalidate_cache: bool = False
     verbose: bool = False
 
+    # Language
+    lang: str = "ko"
+
     def __post_init__(self) -> None:
         """Validate configuration values."""
         if not self.eqpids:
@@ -79,6 +82,9 @@ class ScreenerConfig:
             raise ValueError(
                 f"dbscan_eps must be a positive number, got {self.dbscan_eps!r}"
             )
+
+        if self.lang not in ("ko", "en"):
+            raise ValueError(f"lang must be 'ko' or 'en', got {self.lang!r}")
 
     def __repr__(self) -> str:
         """Return repr with db_password masked."""

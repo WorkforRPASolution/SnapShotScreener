@@ -31,6 +31,7 @@ except ImportError:
 from cassandra.query import ConsistencyLevel
 
 from snapshot_screener.config import ScreenerConfig
+from snapshot_screener.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class CassandraClient:
             self._session = self._cluster.connect()
         except Exception as exc:
             raise ConnectionError(
-                f"Cassandra 연결 실패 ({host}:{port}): {exc}"
+                t("error.cassandra_connect", self._config.lang).format(host=host, port=port, exc=exc)
             ) from exc
 
         self._session.default_timeout = 15.0
@@ -134,7 +135,7 @@ class CassandraClient:
         except Exception as exc:
             self._cluster.shutdown()
             raise ConnectionError(
-                f"Cassandra 쿼리 준비 실패 (keyspace={ks!r}, table={tbl!r}): {exc}"
+                t("error.cassandra_prepare", self._config.lang).format(ks=ks, tbl=tbl, exc=exc)
             ) from exc
 
         # Health check
@@ -143,7 +144,7 @@ class CassandraClient:
         except Exception as exc:
             self._cluster.shutdown()
             raise ConnectionError(
-                f"Cassandra health-check 실패 ({host}:{port}): {exc}"
+                t("error.cassandra_healthcheck", self._config.lang).format(host=host, port=port, exc=exc)
             ) from exc
 
         logger.info("Connected to Cassandra at %s:%s", host, port)

@@ -131,11 +131,11 @@ def run_sensitivity_sweep(
     min_jaccard = min(j for _, _, j in jaccard_pairs) if jaccard_pairs else 0.0
 
     if min_jaccard > 0.8:
-        verdict = "둔감"
+        verdict = "insensitive"
     elif min_jaccard >= 0.5:
-        verdict = "중간"
+        verdict = "moderate"
     else:
-        verdict = "민감"
+        verdict = "sensitive"
 
     return SensitivityResult(
         threshold_values=thresholds,

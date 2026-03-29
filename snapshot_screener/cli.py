@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from snapshot_screener.config import ScreenerConfig
+from snapshot_screener.i18n import t
 from snapshot_screener.utils.progress import get_logger, setup_logging
 
 logger = get_logger(__name__)
@@ -265,6 +266,13 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=False,
         help="디버그 로깅 활성화",
     )
+    parser.add_argument(
+        "--lang",
+        type=str,
+        choices=["ko", "en"],
+        default="ko",
+        help="출력 언어 (ko/en, 기본값: ko)",
+    )
 
     return parser.parse_args(argv), parser
 
@@ -331,6 +339,8 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     eqpid_list = cfg.get("eqpid_list")
     eqpids_raw = cfg.get("eqpids")  # YAML can specify as list directly
 
+    lang = cfg.get("lang", "ko")
+
     if eqpids_raw and isinstance(eqpids_raw, list):
         eqpids = eqpids_raw
     elif eqpid:
@@ -338,7 +348,7 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     elif eqpid_list:
         eqpids = _read_eqpid_list(eqpid_list)
     else:
-        raise ValueError("장비 ID가 지정되지 않았습니다 (--eqpid, --eqpid-list, 또는 config의 eqpids 필요)")
+        raise ValueError(t("error.missing_eqpid", lang))
 
     # Resolve dates (YAML may provide as string)
     date_from = cfg.get("date_from")
@@ -348,14 +358,13 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     if isinstance(date_to, str):
         date_to = datetime.strptime(date_to, "%Y-%m-%d").date()
     if date_from is None or date_to is None:
-        raise ValueError("분석 기간이 지정되지 않았습니다 (--from/--to 또는 config의 date_from/date_to 필요)")
+        raise ValueError(t("error.missing_dates", lang))
 
     # Resolve password: CLI > YAML > environment variable
     db_password = cfg.get("db_password")
     if db_password is not None and getattr(args, "db_password", None) is not None:
         warnings.warn(
-            "비밀번호를 명령줄 인수로 전달하는 것은 안전하지 않습니다. "
-            "SS_DB_PASSWORD 환경변수를 사용하세요.",
+            t("error.password_warning", lang),
             SecurityWarning,
             stacklevel=2,
         )
@@ -364,15 +373,15 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
 
     db_host = cfg.get("db_host")
     if not db_host:
-        raise ValueError("Cassandra 호스트가 지정되지 않았습니다 (--db-host 또는 config의 db_host 필요)")
+        raise ValueError(t("error.missing_db_host", lang))
 
     db_keyspace = cfg.get("db_keyspace")
     if not db_keyspace:
-        raise ValueError("Cassandra 키스페이스가 지정되지 않았습니다 (--db-keyspace 또는 config의 db_keyspace 필요)")
+        raise ValueError(t("error.missing_db_keyspace", lang))
 
     db_table = cfg.get("db_table")
     if not db_table:
-        raise ValueError("Cassandra 테이블이 지정되지 않았습니다 (--db-table 또는 config의 db_table 필요)")
+        raise ValueError(t("error.missing_db_table", lang))
 
     return ScreenerConfig(
         eqpids=eqpids,
@@ -402,6 +411,7 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
         output_dir=cfg.get("output_dir", "."),
         invalidate_cache=cfg.get("invalidate_cache", False),
         verbose=cfg.get("verbose", False),
+        lang=cfg.get("lang", "ko"),
     )
 
 
@@ -424,24 +434,27 @@ def main(argv: Optional[List[str]] = None) -> int:
     args, parser = parse_args(argv)
     setup_logging(args.verbose)
 
+    lang = getattr(args, "lang", "ko")
+
     try:
         config = build_config(args, parser)
+        lang = config.lang
     except (ValueError, argparse.ArgumentTypeError) as e:
-        logger.error(f"설정 오류: {e}")
+        logger.error(t("error.config_error", lang).format(e=e))
         return 1
 
     try:
         run_pipeline(config)
         return 0
     except KeyboardInterrupt:
-        logger.info("중단됨 — 캐시를 정리하는 중...")
+        logger.info(t("error.interrupted", lang))
         return 130
     except ConnectionError as e:
-        logger.error(f"Cassandra 연결 실패: {e}")
+        logger.error(t("error.cassandra_failed", lang).format(e=e))
         return 3
     except ValueError as e:
-        logger.error(f"설정 오류: {e}")
+        logger.error(t("error.config_error", lang).format(e=e))
         return 1
     except Exception as e:
-        logger.error(f"분석 오류: {e}")
+        logger.error(t("error.analysis_error", lang).format(e=e))
         return 2

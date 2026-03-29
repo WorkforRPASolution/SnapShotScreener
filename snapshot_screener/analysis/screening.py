@@ -162,11 +162,11 @@ def _verdict(
     ]
 
     if not active:
-        return "중간"
+        return "medium"
 
     high_count = sum(1 for lvl in active if lvl == "high")
     if high_count >= 2:
-        return "높음"
+        return "high"
     if all(lvl == "low" for lvl in active):
-        return "낮음"
-    return "중간"
+        return "low"
+    return "medium"

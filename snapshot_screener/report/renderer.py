@@ -16,6 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from snapshot_screener import __version__
 from snapshot_screener.config import ScreenerConfig
+from snapshot_screener.i18n import t, get_labels
 from snapshot_screener.models import AnalysisResult, FrameFeature
 
 logger = logging.getLogger(__name__)
@@ -24,13 +25,14 @@ logger = logging.getLogger(__name__)
 # Flag -> display mapping
 # ---------------------------------------------------------------------------
 
-_FLAG_LABELS: Dict[str, str] = {
-    "session_start": "세션 시작",
-    "session_end": "세션 종료",
-    "new_screen": "새 화면 그룹 시작",
-    "transition_point": "전이점 감지",
-    "new_click_cluster": "새 클릭 클러스터 진입",
-}
+def _get_flag_labels(lang: str) -> Dict[str, str]:
+    return {
+        "session_start": t("flag.session_start", lang),
+        "session_end": t("flag.session_end", lang),
+        "new_screen": t("flag.new_screen", lang),
+        "transition_point": t("flag.transition_point", lang),
+        "new_click_cluster": t("flag.new_click_cluster", lang),
+    }
 
 _FLAG_TAG_CLASSES: Dict[str, str] = {
     "session_start": "tag-session",
@@ -78,7 +80,7 @@ def _level_to_verdict_class(level: str) -> str:
     return mapping.get(level, "mid")
 
 
-def _build_screening_context(result: AnalysisResult) -> Dict[str, Any]:
+def _build_screening_context(result: AnalysisResult, lang: str = "ko") -> Dict[str, Any]:
     """Build the screening section context from ScreeningResult."""
     s = result.screening
 
@@ -103,42 +105,26 @@ def _build_screening_context(result: AnalysisResult) -> Dict[str, Any]:
 
     # Human-readable verdict strings for each signal
     if s.click_concentration is not None:
-        if s.click_concentration_level == "high":
-            ctx["click_concentration_verdict"] = (
-                f"패턴 가능성 높음 (> 70%)"
-            )
-        elif s.click_concentration_level == "medium":
-            ctx["click_concentration_verdict"] = "중간 수준 (40% ~ 70%)"
-        else:
-            ctx["click_concentration_verdict"] = "패턴 가능성 낮음 (< 40%)"
+        ctx["click_concentration_verdict"] = t(
+            f"signal.click_concentration.{s.click_concentration_level}", lang
+        )
 
     if s.session_cv is not None:
-        if s.session_cv_level == "high":
-            ctx["session_cv_verdict"] = "세션 구조 일정 (< 0.3)"
-        elif s.session_cv_level == "medium":
-            ctx["session_cv_verdict"] = "중간 수준 (0.3 ~ 0.6)"
-        else:
-            ctx["session_cv_verdict"] = "세션 구조 불규칙 (> 0.6)"
+        ctx["session_cv_verdict"] = t(
+            f"signal.session_cv.{s.session_cv_level}", lang
+        )
 
     if s.sequence_similarity is not None:
-        if s.sequence_similarity_level == "high":
-            ctx["sequence_similarity_verdict"] = "높은 유사도 (> 0.8)"
-        elif s.sequence_similarity_level == "medium":
-            ctx["sequence_similarity_verdict"] = "중간 수준 (0.5 ~ 0.8)"
-        else:
-            ctx["sequence_similarity_verdict"] = "낮은 유사도 (< 0.5)"
+        ctx["sequence_similarity_verdict"] = t(
+            f"signal.sequence_similarity.{s.sequence_similarity_level}", lang
+        )
 
     return ctx
 
 
 def _verdict_to_color(verdict: str) -> str:
     """Map a verdict string to a color name."""
-    v = verdict.lower()
-    if "높음" in v or "high" in v:
-        return "green"
-    elif "중간" in v or "medium" in v:
-        return "amber"
-    return "red"
+    return {"high": "green", "medium": "amber", "low": "red"}.get(verdict, "amber")
 
 
 def _build_sessions_context(
@@ -146,6 +132,7 @@ def _build_sessions_context(
     images: Dict[str, str],
     config: ScreenerConfig,
     frames_rel_dir: str = "",
+    lang: str = "ko",
 ) -> List[Dict[str, Any]]:
     """Build session list context from representative features."""
     # Group by session_id
@@ -182,11 +169,12 @@ def _build_sessions_context(
             time_str = dt.strftime("%H:%M:%S")
 
             # Tags and descriptions from candidate_flags
+            flag_labels = _get_flag_labels(lang)
             tags: List[str] = []
             tag_classes: List[str] = []
             desc_parts: List[str] = []
             for flag in feat.candidate_flags:
-                label = _FLAG_LABELS.get(flag, flag)
+                label = flag_labels.get(flag, flag)
                 cls = _FLAG_TAG_CLASSES.get(flag, "tag-screen")
                 tags.append(label)
                 tag_classes.append(cls)
@@ -312,16 +300,30 @@ def render_report(
     # Verdict
     verdict = result.screening.verdict
     verdict_color = _verdict_to_color(verdict)
+    verdict_display = t("verdict." + verdict, config.lang)
+
+    # Labels for Jinja2 template
+    labels = get_labels(config.lang)
 
     # Build description from screening signals
     parts: List[str] = []
     s = result.screening
     if s.click_concentration is not None:
-        parts.append(f"클릭 좌표 집중도 {s.click_concentration * 100:.1f}%")
+        parts.append(
+            t("desc.click_concentration", config.lang).format(
+                value=s.click_concentration * 100
+            )
+        )
     if s.session_cv is not None:
-        parts.append(f"세션 길이 CV {s.session_cv:.2f}")
+        parts.append(
+            t("desc.session_cv", config.lang).format(value=s.session_cv)
+        )
     if s.sequence_similarity is not None:
-        parts.append(f"시퀀스 유사도 {s.sequence_similarity:.2f}")
+        parts.append(
+            t("desc.sequence_similarity", config.lang).format(
+                value=s.sequence_similarity
+            )
+        )
     verdict_desc = ", ".join(parts) + "." if parts else ""
 
     # Relative path from HTML to frames/ directory
@@ -342,12 +344,16 @@ def render_report(
         "screen_group_count": result.screen_group_count,
         "representative_count": result.representative_count,
         "reduction_rate": result.reduction_rate,
-        "pattern_groups": _build_sessions_context(result, images, config, frames_rel_dir),
-        "screening": _build_screening_context(result),
+        "pattern_groups": _build_sessions_context(
+            result, images, config, frames_rel_dir, lang=config.lang,
+        ),
+        "screening": _build_screening_context(result, lang=config.lang),
         "sensitivity": _build_sensitivity_context(result),
-        "verdict": verdict,
+        "verdict": verdict_display,
         "verdict_color": verdict_color,
         "verdict_desc": verdict_desc,
+        "lang": config.lang,
+        "labels": labels,
     }
 
     html = template.render(**context)

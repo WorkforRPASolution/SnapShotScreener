@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from snapshot_screener.i18n import t
 from snapshot_screener.analysis import (
     assign_screen_groups,
     cluster_clicks,
@@ -62,7 +63,7 @@ def run_pipeline(config: "ScreenerConfig") -> None:
                 if result:
                     results.append(result)
             except Exception as e:
-                logger.error(f"장비 {eqpid} 분석 실패: {e}")
+                logger.error(t("log.equipment_failed", config.lang).format(eqpid=eqpid, error=e))
                 continue
 
     # Multi-equipment summary
@@ -92,25 +93,25 @@ def run_single_equipment(
         Analysis result, or None if no data found.
     """
     # Phase 1: Metadata collection
-    logger.info(f"[Phase 1] {eqpid} — 메타데이터 수집")
+    logger.info(t("log.phase1", config.lang).format(eqpid=eqpid))
     metas = collect_metadata(client, eqpid, config)
     if not metas:
-        logger.warning(f"{eqpid}: 데이터 없음")
+        logger.warning(t("log.no_data", config.lang).format(eqpid=eqpid))
         return None
 
     # Phase 2: pHash collection
-    logger.info(f"[Phase 2] {eqpid} — pHash 수집 (캐시 우선)")
+    logger.info(t("log.phase2", config.lang).format(eqpid=eqpid))
     with PhashCache(config.cache_dir) as cache:
         if config.invalidate_cache:
             cache.invalidate(eqpid)
         features = collect_phash(client, cache, metas, config)
 
     if not features:
-        logger.warning(f"{eqpid}: pHash 수집 결과 없음")
+        logger.warning(t("log.no_phash", config.lang).format(eqpid=eqpid))
         return None
 
     # Phase 3: Analysis
-    logger.info(f"[Phase 3] {eqpid} — 분석")
+    logger.info(t("log.phase3", config.lang).format(eqpid=eqpid))
     separate_sessions(features, config.session_gap_ms, eqpid)
     assign_screen_groups(features, config.phash_similar_threshold)
     cluster_clicks(
@@ -167,13 +168,11 @@ def run_single_equipment(
     )
 
     # Phase 4: Report image collection
-    logger.info(
-        f"[Phase 4] {eqpid} — 리포트 이미지 수집 ({len(representative_features)}장)"
-    )
+    logger.info(t("log.phase4", config.lang).format(eqpid=eqpid, count=len(representative_features)))
     collected = collect_report_images(client, representative_features, eqpid, config)
 
     # Phase 5: Report generation + original image export + JSON export
-    logger.info(f"[Phase 5] {eqpid} — 리포트 및 산출물 생성")
+    logger.info(t("log.phase5", config.lang).format(eqpid=eqpid))
 
     output_dir = Path(config.output_dir)
     date_from_str = str(config.date_from).replace("-", "")
@@ -182,7 +181,7 @@ def run_single_equipment(
 
     # 5a: HTML report (thumbnails)
     report_path = render_report(result, collected.thumbnails, config)
-    logger.info(f"HTML 리포트: {report_path}")
+    logger.info(t("log.html_report", config.lang).format(path=report_path))
 
     # 5b: Save original images to frames/ directory
     frames_dir = output_dir / base_name / "frames"
@@ -197,13 +196,13 @@ def run_single_equipment(
         img_path = frames_dir / feat.fname
         img_path.write_bytes(img_bytes)
         saved_count += 1
-    logger.info(f"원본 이미지 저장: {frames_dir} ({saved_count}장)")
+    logger.info(t("log.original_images", config.lang).format(path=frames_dir, count=saved_count))
 
     # 5c: JSON export (machine-readable analysis result)
     json_path = output_dir / f"{base_name}.json"
     json_data = _build_json_export(result, config)
     json_path.write_text(json.dumps(json_data, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info(f"JSON 익스포트: {json_path}")
+    logger.info(t("log.json_export", config.lang).format(path=json_path))
 
     return result
 
@@ -234,7 +233,7 @@ def _build_json_export(result: AnalysisResult, config: "ScreenerConfig") -> Dict
         })
 
     return {
-        "version": "1.0",
+        "version": "1.1",
         "eqpid": result.eqpid,
         "date_from": str(config.date_from),
         "date_to": str(config.date_to),

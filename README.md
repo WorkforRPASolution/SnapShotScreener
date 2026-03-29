@@ -190,6 +190,7 @@ fname_pattern: auto
 cache_dir: "."
 output_dir: "./output"
 verbose: false
+lang: ko                 # ko (한국어) | en (English)
 ```
 
 config 파일에서 지원하는 모든 키는 CLI 파라미터와 1:1 대응한다. 전체 파라미터 목록은 [5. CLI 레퍼런스](#5-cli-레퍼런스)를 참조한다. CLI 인자를 추가하면 config 파일의 값을 오버라이드한다.
@@ -316,6 +317,7 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | `--output-dir` | `.` (현재 디렉토리) | HTML 리포트 출력 위치 |
 | `--invalidate-cache` | (플래그) | pHash 캐시 전체 무효화 후 재계산 |
 | `--verbose` | (플래그) | 디버그 로깅 활성화 |
+| `--lang` | ko | 출력 언어 (`ko` 한국어, `en` English). 콘솔 로그, HTML 리포트, 에러 메시지에 적용 |
 
 ### 환경변수
 
