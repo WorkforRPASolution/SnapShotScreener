@@ -80,6 +80,11 @@ def collect_metadata(
                 continue
 
             x, y, timestamp_ms = parsed
+
+            # x or y >= 9999 means non-click snapshot (e.g. periodic capture)
+            if x >= 9999 or y >= 9999:
+                continue
+
             results.append(
                 SnapshotMeta(
                     eqpid=eqpid,
