@@ -304,6 +304,7 @@ snapshot-screener --triage \
 - 톰스톤 회피 쿼리 (`fname >= ?`)로 TTL 만료 행 스캔 방지
 - 회로 차단기: Cassandra 연속 실패 시 자동 중단 + 부분 결과 저장
 - JSONL 저널: 장비별 결과 즉시 기록, Ctrl+C에도 부분 결과 보존
+- 대량 클릭 보호: 장비당 클릭 수가 `max_clicks_per_equipment` (기본 50,000) 초과 시 DBSCAN 스킵 (세션 CV 판정에 영향 없음)
 
 ### 출력 파일 확인
 
@@ -392,6 +393,7 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | `--triage` | `triage` | (플래그) | 트리아지 모드 활성화. Config 파일에서 `triage: true`로도 활성화 가능 |
 | `--csv` | `csv` | (필수) | 장비 계층 CSV 파일 경로 (열 순서: process, model, eqpid). 절대/상대 경로 모두 가능 |
 | `--db-snapshotlist-table` | `db_snapshotlist_table` | `snapshotlist` | snapshotlist 테이블명 |
+| (config 전용) | `max_clicks_per_equipment` | `50000` | 장비당 클릭 수 상한. 초과 시 DBSCAN 스킵 (메모리 보호) |
 
 트리아지 모드에서는 `--eqpid`, `--eqpid-list`, `--db-table`, `--phash-*`, `--selector`, `--sensitivity-sweep`, `--cache-dir`, `--invalidate-cache` 인자가 무시된다. `--from`/`--to` 미지정 시 최근 14일이 자동 설정된다. `--db-host`, `--db-keyspace`, `--db-port` 등 Cassandra 접속 설정은 일반 모드와 공유한다.
 

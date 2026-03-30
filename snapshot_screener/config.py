@@ -128,6 +128,7 @@ class TriageConfig:
     screen_width: int = 1920
     screen_height: int = 1080
     fname_pattern: str = "auto"
+    max_clicks_per_equipment: int = 50_000
 
     # Output
     output_dir: str = "."

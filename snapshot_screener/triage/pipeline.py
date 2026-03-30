@@ -103,18 +103,21 @@ def _analyze_single_equipment(
     for f in features:
         f._phase_completed = 2
 
-    # DBSCAN click clustering (phase 2 → 3)
-    cluster_clicks(
-        features,
-        config.dbscan_eps,
-        config.dbscan_min_samples,
-        config.screen_width,
-        config.screen_height,
-    )
+    # DBSCAN is O(N^2) memory — skip for large equipment
+    skip_clustering = len(features) > config.max_clicks_per_equipment
+    if not skip_clustering:
+        cluster_clicks(
+            features,
+            config.dbscan_eps,
+            config.dbscan_min_samples,
+            config.screen_width,
+            config.screen_height,
+        )
 
     # Triage screening
     return compute_triage_screening(
-        features, eq.eqpid, eq.process, eq.model, data_days
+        features, eq.eqpid, eq.process, eq.model, data_days,
+        skip_clustering=skip_clustering,
     )
 
 

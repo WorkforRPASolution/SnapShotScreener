@@ -65,23 +65,31 @@ def compute_triage_screening(
     process: str,
     model: str,
     data_days: int,
+    *,
+    skip_clustering: bool = False,
 ) -> TriageEquipmentResult:
     """Compute triage screening.
 
     Parameters
     ----------
     features:
-        FrameFeature list after session separation + DBSCAN clustering.
-        Screen group assignment and pHash are NOT required.
+        FrameFeature list after session separation.
+        DBSCAN clustering is optional (see *skip_clustering*).
     eqpid, process, model:
         Equipment identity for the result record.
     data_days:
         Number of distinct days with data.
+    skip_clustering:
+        If True, skip click_concentration (set to None).
+        Used when click count is too large for DBSCAN.
     """
     total = len(features)
 
     # Click concentration — reported only, not used in verdict
-    cc_val, cc_level = click_concentration(features, total)
+    if skip_clustering:
+        cc_val, cc_level = None, "skipped"
+    else:
+        cc_val, cc_level = click_concentration(features, total)
 
     # Session CV — primary verdict signal (triage thresholds)
     cv_val, cv_level = _triage_session_cv(features)

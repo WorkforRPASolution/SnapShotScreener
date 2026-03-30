@@ -508,6 +508,7 @@ def build_triage_config(
         screen_height=cfg.get("screen_height", 1080),
         fname_pattern=cfg.get("fname_pattern", "auto"),
         output_dir=cfg.get("output_dir", "."),
+        max_clicks_per_equipment=cfg.get("max_clicks_per_equipment", 50_000),
         circuit_breaker_threshold=cfg.get("circuit_breaker_threshold", 10),
         health_check_interval=cfg.get("health_check_interval", 500),
         verbose=cfg.get("verbose", False),
