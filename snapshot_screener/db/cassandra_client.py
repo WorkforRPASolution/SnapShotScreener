@@ -48,11 +48,9 @@ class CassandraConfigProtocol(Protocol):
     db_host: str
     db_port: int
     db_keyspace: str
-    db_table: str
     db_username: Optional[str]
     db_password: Optional[str]
     fname_delay_ms: int
-    read_delay_ms: int
     lang: str
 
 
@@ -154,23 +152,26 @@ class CassandraClient:
 
         # Prepare statements (keyspace/table filled once here)
         ks = self._config.db_keyspace
-        tbl = self._config.db_table
 
-        try:
-            self._prep_fnames = self._session.prepare(
-                _Q_FNAMES.format(ks=ks, tbl=tbl)
-            )
-            self._prep_fnames.consistency_level = ConsistencyLevel.LOCAL_ONE
+        # _prep_fnames / _prep_image are only needed for normal mode
+        # (TriageConfig does not have db_table)
+        if hasattr(self._config, "db_table") and self._config.db_table:
+            tbl = self._config.db_table
+            try:
+                self._prep_fnames = self._session.prepare(
+                    _Q_FNAMES.format(ks=ks, tbl=tbl)
+                )
+                self._prep_fnames.consistency_level = ConsistencyLevel.LOCAL_ONE
 
-            self._prep_image = self._session.prepare(
-                _Q_IMAGE.format(ks=ks, tbl=tbl)
-            )
-            self._prep_image.consistency_level = ConsistencyLevel.LOCAL_ONE
-        except Exception as exc:
-            self._cluster.shutdown()
-            raise ConnectionError(
-                t("error.cassandra_prepare", self._config.lang).format(ks=ks, tbl=tbl, exc=exc)
-            ) from exc
+                self._prep_image = self._session.prepare(
+                    _Q_IMAGE.format(ks=ks, tbl=tbl)
+                )
+                self._prep_image.consistency_level = ConsistencyLevel.LOCAL_ONE
+            except Exception as exc:
+                self._cluster.shutdown()
+                raise ConnectionError(
+                    t("error.cassandra_prepare", self._config.lang).format(ks=ks, tbl=tbl, exc=exc)
+                ) from exc
 
         # Prepare snapshotlist statement (triage mode only)
         if self._snapshotlist_table:
@@ -216,6 +217,9 @@ class CassandraClient:
         self, eqpid: str, year: int, month: int, day: int
     ) -> List[str]:
         """Return filenames for the given equipment + date partition."""
+        assert self._prep_fnames is not None, (
+            "fnames statement not prepared — config must have db_table"
+        )
         rows = self._execute_with_retry(
             self._prep_fnames, (eqpid, year, month, day)
         )
@@ -232,11 +236,14 @@ class CassandraClient:
         fname: str,
     ) -> Optional[str]:
         """Return Base64-encoded image text, or *None* if not found."""
+        assert self._prep_image is not None, (
+            "image statement not prepared — config must have db_table"
+        )
         rows = self._execute_with_retry(
             self._prep_image, (eqpid, year, month, day, fname)
         )
         result = rows.one() if hasattr(rows, "one") else next(iter(rows), None)
-        time.sleep(self._config.read_delay_ms / 1000)
+        time.sleep(getattr(self._config, "read_delay_ms", 200) / 1000)
         if result is None:
             return None
         return result.image

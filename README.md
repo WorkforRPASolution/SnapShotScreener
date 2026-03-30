@@ -267,7 +267,7 @@ PROCESS_B,MODEL_Y,EQ-3100
 ```yaml
 # config/triage.yaml
 triage: true
-csv: equipment.csv           # config 파일 기준 상대 경로
+csv: equipment.csv           # 상대 경로(config 기준) 또는 절대 경로
 
 date_from: "2026-03-15"
 date_to: "2026-03-29"
@@ -280,7 +280,7 @@ output_dir: ./triage_output
 snapshot-screener --config config/triage.yaml
 ```
 
-> **CSV 경로 해석 규칙**: `csv` 값이 상대 경로이면 config 파일이 위치한 디렉터리를 기준으로 해석된다. 따라서 config 파일과 CSV를 같은 폴더에 두면 편리하다.
+> **CSV 경로 해석 규칙**: 절대 경로는 그대로 사용된다. 상대 경로는 config 파일이 있으면 config 파일 디렉터리 기준, 없으면 현재 작업 디렉터리(CWD) 기준으로 해석된다.
 
 **CLI 직접 지정:**
 
@@ -344,7 +344,7 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | `--to` | `date_to` | 분석 종료일 (YYYY-MM-DD) | `2026-03-25` |
 | `--db-host` | `db_host` | Cassandra 호스트 주소 | `10.0.1.50` |
 | `--db-keyspace` | `db_keyspace` | Cassandra 키스페이스 | `factory` |
-| `--db-table` | `db_table` | Cassandra 테이블 이름 | `snapshots` |
+| `--db-table` | `db_table` | Cassandra 테이블 이름 (기본: `snapshot`) | `snapshots` |
 
 `--eqpid`와 `--eqpid-list`는 상호 배타적이다. 둘 중 하나를 반드시 지정해야 한다. config 파일에서는 `eqpids` 키로 복수 장비를 직접 리스트로 지정할 수도 있다.
 
@@ -390,7 +390,7 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | 파라미터 | Config 키 | 기본값 | 설명 |
 |----------|-----------|--------|------|
 | `--triage` | `triage` | (플래그) | 트리아지 모드 활성화. Config 파일에서 `triage: true`로도 활성화 가능 |
-| `--csv` | `csv` | (필수) | 장비 계층 CSV 파일 경로 (열 순서: process, model, eqpid). Config 파일 기준 상대 경로 해석 |
+| `--csv` | `csv` | (필수) | 장비 계층 CSV 파일 경로 (열 순서: process, model, eqpid). 절대/상대 경로 모두 가능 |
 | `--db-snapshotlist-table` | `db_snapshotlist_table` | `snapshotlist` | snapshotlist 테이블명 |
 
 트리아지 모드에서는 `--eqpid`, `--eqpid-list`, `--db-table`, `--phash-*`, `--selector`, `--sensitivity-sweep`, `--cache-dir`, `--invalidate-cache` 인자가 무시된다. `--from`/`--to` 미지정 시 최근 14일이 자동 설정된다. `--db-host`, `--db-keyspace`, `--db-port` 등 Cassandra 접속 설정은 일반 모드와 공유한다.

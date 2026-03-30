@@ -22,7 +22,7 @@ class ScreenerConfig:
     db_host: str
     db_port: int = 9042
     db_keyspace: str = ""
-    db_table: str = ""
+    db_table: str = "snapshot"
     db_username: Optional[str] = None
     db_password: Optional[str] = None
     read_delay_ms: int = 200
@@ -119,9 +119,6 @@ class TriageConfig:
     db_username: Optional[str] = None
     db_password: Optional[str] = None
     fname_delay_ms: int = 50
-    # Fields below satisfy CassandraConfigProtocol
-    read_delay_ms: int = 50
-    db_table: str = "snapshotlist"
     max_connections: int = 2
 
     # Analysis

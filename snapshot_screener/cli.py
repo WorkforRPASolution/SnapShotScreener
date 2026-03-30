@@ -131,7 +131,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--db-table",
         type=str,
         required=False,
-        help="Cassandra 테이블 이름",
+        default="snapshot",
+        help="Cassandra 테이블 이름 (기본: snapshot)",
     )
 
     # ---- Optional: Cassandra ----
@@ -399,9 +400,7 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     if not db_keyspace:
         raise ValueError(t("error.missing_db_keyspace", lang))
 
-    db_table = cfg.get("db_table")
-    if not db_table:
-        raise ValueError(t("error.missing_db_table", lang))
+    db_table = cfg.get("db_table", "snapshot")
 
     return ScreenerConfig(
         eqpids=eqpids,
@@ -454,12 +453,18 @@ def build_triage_config(
     if not csv_path:
         raise ValueError("트리아지 모드에서 --csv 는 필수입니다")
 
-    # Resolve CSV path relative to config file directory
-    if args.config and not Path(csv_path).is_absolute():
-        config_dir = Path(args.config).resolve().parent
-        resolved = config_dir / csv_path
-        if resolved.exists():
-            csv_path = str(resolved)
+    # Resolve CSV path:
+    #   absolute  → use as-is
+    #   relative + config file → resolve relative to config file directory
+    #   relative + no config  → resolve relative to CWD
+    if not Path(csv_path).is_absolute():
+        if args.config:
+            config_dir = Path(args.config).resolve().parent
+            resolved = config_dir / csv_path
+            if resolved.exists():
+                csv_path = str(resolved)
+        else:
+            csv_path = str(Path(csv_path).resolve())
 
     # Resolve dates — auto-default to last 14 days if not specified
     date_from = cfg.get("date_from")
@@ -495,8 +500,6 @@ def build_triage_config(
         db_username=cfg.get("db_username"),
         db_password=db_password,
         fname_delay_ms=cfg.get("fname_delay_ms", 50),
-        read_delay_ms=cfg.get("read_delay_ms", 50),
-        db_table=cfg.get("db_snapshotlist_table", "snapshotlist"),
         max_connections=cfg.get("max_connections", 2),
         session_gap_ms=cfg.get("session_gap_ms", 900_000),
         dbscan_eps=cfg.get("dbscan_eps", 0.03),
