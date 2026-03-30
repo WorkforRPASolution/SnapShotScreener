@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, List, Optional
 
 from snapshot_screener.analysis.clustering import cluster_clicks
 from snapshot_screener.analysis.session import separate_sessions
-from snapshot_screener.db.cassandra_client import CassandraClient
 from snapshot_screener.models import FrameFeature
 from snapshot_screener.triage.collector import (
     collect_triage_metadata,
@@ -33,6 +32,7 @@ from snapshot_screener.utils.progress import get_logger, setup_logging
 
 if TYPE_CHECKING:
     from snapshot_screener.config import TriageConfig
+    from snapshot_screener.db.cassandra_client import CassandraClient
 
 logger = get_logger(__name__)
 
@@ -142,6 +142,8 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
     Returns a :class:`TriageReport` or ``None`` if no results.
     """
     setup_logging(config.verbose)
+
+    from snapshot_screener.db.cassandra_client import CassandraClient
 
     # T1: Load equipment CSV
     equipment_list = load_equipment_csv(config.csv_path)

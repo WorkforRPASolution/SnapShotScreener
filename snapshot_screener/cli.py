@@ -454,6 +454,13 @@ def build_triage_config(
     if not csv_path:
         raise ValueError("트리아지 모드에서 --csv 는 필수입니다")
 
+    # Resolve CSV path relative to config file directory
+    if args.config and not Path(csv_path).is_absolute():
+        config_dir = Path(args.config).resolve().parent
+        resolved = config_dir / csv_path
+        if resolved.exists():
+            csv_path = str(resolved)
+
     # Resolve dates — auto-default to last 14 days if not specified
     date_from = cfg.get("date_from")
     date_to = cfg.get("date_to")
@@ -523,8 +530,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     lang = getattr(args, "lang", "ko")
 
-    # ---- Triage mode ----
-    if getattr(args, "triage", False):
+    # ---- Triage mode (CLI flag or config file) ----
+    triage_from_config = False
+    if args.config and not getattr(args, "triage", False):
+        _peek = _load_yaml_config(args.config)
+        triage_from_config = _peek.get("triage", False)
+
+    if getattr(args, "triage", False) or triage_from_config:
         from snapshot_screener.triage.pipeline import run_triage
 
         try:
