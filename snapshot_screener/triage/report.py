@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from jinja2 import Environment, FileSystemLoader, PackageLoader
 
+from snapshot_screener.i18n import get_labels, t
 from snapshot_screener.triage.models import (
     TriageEquipmentResult,
     TriageModelSummary,
@@ -91,14 +92,15 @@ def build_triage_report(
     date_to_str = str(config.date_to).replace("-", "")
     base = f"TriageReport_{date_from_str}-{date_to_str}"
 
-    _write_csv(report, output_dir / f"{base}.csv")
-    _write_json(report, output_dir / f"{base}.json")
+    lang = config.lang
+    _write_csv(report, output_dir / f"{base}.csv", lang)
+    _write_json(report, output_dir / f"{base}.json", lang)
     _write_html(report, output_dir / f"{base}.html", config)
 
     return report
 
 
-def _write_csv(report: TriageReport, path: Path) -> None:
+def _write_csv(report: TriageReport, path: Path, lang: str = "ko") -> None:
     """Write flat CSV output."""
     fieldnames = [
         "process", "model", "eqpid",
@@ -127,10 +129,10 @@ def _write_csv(report: TriageReport, path: Path) -> None:
                 "verdict": r.verdict,
                 "error": r.error or "",
             })
-    logger.info("[Triage] CSV report: %s", path)
+    logger.info(t("triage.log.csv_report", lang).format(path=path))
 
 
-def _write_json(report: TriageReport, path: Path) -> None:
+def _write_json(report: TriageReport, path: Path, lang: str = "ko") -> None:
     """Write structured JSON output."""
 
     def _result_dict(r: TriageEquipmentResult) -> dict:
@@ -192,7 +194,7 @@ def _write_json(report: TriageReport, path: Path) -> None:
         json.dumps(data, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    logger.info("[Triage] JSON report: %s", path)
+    logger.info(t("triage.log.json_report", lang).format(path=path))
 
 
 def _write_html(
@@ -214,7 +216,8 @@ def _write_html(
             autoescape=True,
         )
 
+    labels = get_labels(config.lang)
     template = env.get_template("triage.html.j2")
-    html = template.render(report=report, config=config)
+    html = template.render(report=report, config=config, L=labels)
     path.write_text(html, encoding="utf-8")
-    logger.info("[Triage] HTML report: %s", path)
+    logger.info(t("triage.log.html_report", config.lang).format(path=path))

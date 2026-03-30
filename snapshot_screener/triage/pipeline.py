@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from snapshot_screener.analysis.clustering import cluster_clicks
 from snapshot_screener.analysis.session import separate_sessions
+from snapshot_screener.i18n import t
 from snapshot_screener.models import FrameFeature
 from snapshot_screener.triage.collector import (
     collect_triage_metadata,
@@ -111,13 +112,14 @@ def _analyze_single_equipment(
         config.screen_height,
     )
 
-    # Triage screening (2-signal verdict)
+    # Triage screening
     return compute_triage_screening(
         features, eq.eqpid, eq.process, eq.model, data_days
     )
 
 
 def _log_progress(
+    lang: str,
     current: int,
     total: int,
     failed: int,
@@ -131,8 +133,10 @@ def _log_progress(
         eta_min = eta_s / 60
         pct = current / total * 100
         logger.info(
-            "[Triage] [%d/%d] %.1f%% | %d failed | ETA %.0fm",
-            current, total, pct, failed, eta_min,
+            t("triage.log.progress", lang).format(
+                current=current, total=total, pct=pct,
+                failed=failed, eta=eta_min,
+            )
         )
 
 
@@ -142,13 +146,14 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
     Returns a :class:`TriageReport` or ``None`` if no results.
     """
     setup_logging(config.verbose)
+    lang = config.lang
 
     from snapshot_screener.db.cassandra_client import CassandraClient
 
     # T1: Load equipment CSV
-    equipment_list = load_equipment_csv(config.csv_path)
+    equipment_list = load_equipment_csv(config.csv_path, lang=lang)
     total = len(equipment_list)
-    logger.info("[Triage] Loaded %d equipment, starting scan", total)
+    logger.info(t("triage.log.loaded", lang).format(count=total))
 
     results: List[TriageEquipmentResult] = []
     failed_count = 0
@@ -173,11 +178,17 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
                     result = _analyze_single_equipment(client, eq, config)
                     consecutive_failures = 0
                 except Exception as exc:
+                    error_str = f"{type(exc).__name__}: {exc}"
+                    logger.warning(
+                        t("triage.log.failed", lang).format(
+                            eqpid=eq.eqpid, error=error_str,
+                        )
+                    )
                     result = TriageEquipmentResult(
                         eqpid=eq.eqpid,
                         process=eq.process,
                         model=eq.model,
-                        error=f"{type(exc).__name__}: {exc}",
+                        error=error_str,
                     )
                     consecutive_failures += 1
 
@@ -195,21 +206,19 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
                 # Circuit breaker
                 if consecutive_failures >= config.circuit_breaker_threshold:
                     logger.warning(
-                        "[Triage] %d consecutive failures, "
-                        "running health check...",
-                        consecutive_failures,
+                        t("triage.log.circuit_breaker", lang).format(
+                            count=consecutive_failures,
+                        )
                     )
                     if not client.health_check():
                         logger.error(
-                            "[Triage] Health check failed — aborting "
-                            "after %d/%d equipment (%d failed)",
-                            idx, total, failed_count,
+                            t("triage.log.health_failed", lang).format(
+                                idx=idx, total=total, failed=failed_count,
+                            )
                         )
                         break
                     # Health check passed — reset and continue
-                    logger.info(
-                        "[Triage] Health check passed, continuing"
-                    )
+                    logger.info(t("triage.log.health_passed", lang))
                     consecutive_failures = 0
 
                 # Periodic health check
@@ -221,13 +230,13 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
 
                 # Progress reporting
                 if idx % 100 == 0 or idx == total:
-                    _log_progress(idx, total, failed_count, start_time)
+                    _log_progress(lang, idx, total, failed_count, start_time)
 
         except KeyboardInterrupt:
             logger.warning(
-                "[Triage] Interrupted. Saving partial results "
-                "(%d/%d completed).",
-                len(results), total,
+                t("triage.log.interrupted", lang).format(
+                    done=len(results), total=total,
+                )
             )
         finally:
             journal_file.close()
@@ -235,7 +244,7 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
     elapsed = time.monotonic() - start_time
 
     if not results:
-        logger.warning("[Triage] No results collected.")
+        logger.warning(t("triage.log.no_results", lang))
         return None
 
     # T4: Build report
@@ -244,14 +253,14 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
     report = build_triage_report(results, config, elapsed)
 
     logger.info(
-        "[Triage] Complete: %d equipment in %.1fs "
-        "(high=%d, medium=%d, low=%d, error=%d)",
-        len(results),
-        elapsed,
-        report.high_count,
-        report.medium_count,
-        report.low_count,
-        report.error_count,
+        t("triage.log.complete", lang).format(
+            count=len(results),
+            elapsed=elapsed,
+            high=report.high_count,
+            medium=report.medium_count,
+            low=report.low_count,
+            error=report.error_count,
+        )
     )
 
     return report

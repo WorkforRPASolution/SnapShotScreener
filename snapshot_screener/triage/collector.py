@@ -10,6 +10,7 @@ import calendar
 from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, List, Set
 
+from snapshot_screener.i18n import t
 from snapshot_screener.models import SnapshotMeta
 from snapshot_screener.utils.date_range import iter_monthly_partition_keys
 from snapshot_screener.utils.fname_parser import FnameParser
@@ -72,8 +73,9 @@ def collect_triage_metadata(
             )
         except Exception as exc:
             logger.warning(
-                "[Triage] Failed to query snapshotlist for %s %04d-%02d: %s",
-                eqpid, year, month, exc,
+                t("triage.log.fname_parse_fail", config.lang).format(
+                    fname=f"{eqpid}/{year:04d}-{month:02d}: {exc}",
+                )
             )
             continue
 

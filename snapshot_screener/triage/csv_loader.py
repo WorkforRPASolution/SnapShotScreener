@@ -12,6 +12,8 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+from snapshot_screener.i18n import t
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,7 +26,7 @@ class EquipmentInfo:
     model: str
 
 
-def load_equipment_csv(csv_path: str) -> List[EquipmentInfo]:
+def load_equipment_csv(csv_path: str, *, lang: str = "ko") -> List[EquipmentInfo]:
     """Parse the equipment hierarchy CSV and return a list of entries.
 
     The CSV is parsed by column position (not header name):
@@ -59,7 +61,9 @@ def load_equipment_csv(csv_path: str) -> List[EquipmentInfo]:
                 continue
             if len(row) < 3:
                 logger.warning(
-                    "Skipping CSV line %d: fewer than 3 columns", line_num
+                    t("triage.log.csv_short", lang).format(
+                        line=line_num, row=row,
+                    )
                 )
                 continue
 
@@ -69,17 +73,15 @@ def load_equipment_csv(csv_path: str) -> List[EquipmentInfo]:
 
             if not eqpid:
                 logger.warning(
-                    "Skipping CSV line %d: empty eqpid", line_num
+                    t("triage.log.csv_blank", lang).format(line=line_num)
                 )
                 continue
 
             if eqpid in seen:
                 logger.warning(
-                    "Duplicate eqpid '%s' at line %d "
-                    "(first seen at line %d), skipping",
-                    eqpid,
-                    line_num,
-                    seen[eqpid],
+                    t("triage.log.csv_duplicate", lang).format(
+                        eqpid=eqpid, line=line_num,
+                    )
                 )
                 continue
 
@@ -91,7 +93,11 @@ def load_equipment_csv(csv_path: str) -> List[EquipmentInfo]:
     if not results:
         raise ValueError(f"No valid equipment rows found in: {csv_path}")
 
-    logger.info("Loaded %d equipment from CSV: %s", len(results), csv_path)
+    logger.info(
+        t("triage.log.csv_loaded", lang).format(
+            count=len(results), path=csv_path,
+        )
+    )
     return results
 
 

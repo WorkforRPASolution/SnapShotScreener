@@ -97,14 +97,6 @@
   .verdict-error { color: var(--text-muted); font-style: italic; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-  /* Filter */
-  .filter-bar { margin: 24px 0 16px; display: flex; gap: 8px; }
-  .filter-btn {
-    background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim);
-    padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
-  }
-  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-
   .meta { color: var(--text-muted); font-size: 12px; margin-top: 32px; }
 
   /* Guide */
@@ -139,10 +131,10 @@
 
 <div class="header">
   <div class="inner">
-    <h1>SnapshotScreener Triage Report</h1>
+    <h1>{{ L.triage_report_title }}</h1>
     <div class="subtitle">
       {{ report.date_from }} ~ {{ report.date_to }}
-      &nbsp;|&nbsp; {{ report.total_equipment }} equipment
+      &nbsp;|&nbsp; {{ report.total_equipment }} {{ L.triage_report_equipment }}
       &nbsp;|&nbsp; {{ report.scan_duration_s }}s
       &nbsp;|&nbsp; {{ report.generated_at }}
     </div>
@@ -153,23 +145,23 @@
   <!-- Summary Cards -->
   <div class="cards">
     <div class="card card-total">
-      <div class="card-label">Total</div>
+      <div class="card-label">{{ L.triage_report_total }}</div>
       <div class="card-value">{{ report.total_equipment }}</div>
     </div>
     <div class="card card-high">
-      <div class="card-label">High</div>
+      <div class="card-label">{{ L.triage_report_high }}</div>
       <div class="card-value">{{ report.high_count }}</div>
     </div>
     <div class="card card-medium">
-      <div class="card-label">Medium</div>
+      <div class="card-label">{{ L.triage_report_medium }}</div>
       <div class="card-value">{{ report.medium_count }}</div>
     </div>
     <div class="card card-low">
-      <div class="card-label">Low</div>
+      <div class="card-label">{{ L.triage_report_low }}</div>
       <div class="card-value">{{ report.low_count }}</div>
     </div>
     <div class="card card-error">
-      <div class="card-label">Error</div>
+      <div class="card-label">{{ L.triage_report_error }}</div>
       <div class="card-value">{{ report.error_count }}</div>
     </div>
   </div>
@@ -177,72 +169,72 @@
   <!-- Interpretation Guide -->
   <div class="guide" onclick="this.classList.toggle('open')">
     <div class="guide-header">
-      <span class="guide-title">How to Read This Report</span>
-      <span class="guide-toggle">click to expand</span>
+      <span class="guide-title">{{ L.triage_report_guide_title }}</span>
+      <span class="guide-toggle">{{ L.triage_report_guide_toggle }}</span>
     </div>
     <div class="guide-body">
-      <h3>Columns</h3>
+      <h3>{{ L.triage_report_columns }}</h3>
       <table class="guide-table">
         <tr>
-          <th>Column</th><th>Meaning</th><th>Note</th>
+          <th>{{ L.triage_report_col_header }}</th><th>{{ L.triage_report_col_meaning }}</th><th>{{ L.triage_report_col_note }}</th>
         </tr>
         <tr>
-          <td><strong>Clicks</strong></td>
-          <td>Total click count in the analysis period</td>
+          <td><strong>{{ L.triage_report_col_clicks }}</strong></td>
+          <td>{{ L.triage_report_col_clicks_desc }}</td>
           <td></td>
         </tr>
         <tr>
-          <td><strong>Sessions</strong></td>
-          <td>Number of sessions (separated by 15-min gap)</td>
+          <td><strong>{{ L.triage_report_col_sessions }}</strong></td>
+          <td>{{ L.triage_report_col_sessions_desc }}</td>
           <td></td>
         </tr>
         <tr>
-          <td><strong>Days</strong></td>
-          <td>Number of distinct days with data</td>
+          <td><strong>{{ L.triage_report_col_days }}</strong></td>
+          <td>{{ L.triage_report_col_days_desc }}</td>
           <td></td>
         </tr>
         <tr>
-          <td><strong>Concentration</strong></td>
-          <td>DBSCAN cluster membership ratio — how concentrated clicks are at specific coordinates</td>
-          <td>Reference only. Fixed-UI equipment typically shows &gt; 0.95 regardless of automation</td>
+          <td><strong>{{ L.triage_report_col_concentration }}</strong></td>
+          <td>{{ L.triage_report_col_concentration_desc }}</td>
+          <td>{{ L.triage_report_col_concentration_note }}</td>
         </tr>
         <tr>
-          <td><strong>CV</strong></td>
-          <td>Coefficient of Variation of clicks per session — how uniform session lengths are</td>
-          <td>Primary verdict signal</td>
+          <td><strong>{{ L.triage_report_col_cv }}</strong></td>
+          <td>{{ L.triage_report_col_cv_desc }}</td>
+          <td>{{ L.triage_report_col_cv_note }}</td>
         </tr>
       </table>
 
-      <h3>Verdict (based on Session CV)</h3>
+      <h3>{{ L.triage_report_verdict_title }}</h3>
       <table class="guide-table">
-        <tr><th>CV Range</th><th>Verdict</th><th>Meaning</th></tr>
-        <tr><td>&lt; 0.25</td><td class="verdict-high">high</td><td>Sessions have nearly identical click counts — automation pattern suspected. Prioritize for full analysis</td></tr>
-        <tr><td>0.25 ~ 0.60</td><td class="verdict-medium">medium</td><td>Moderate uniformity — review if resources allow</td></tr>
-        <tr><td>&gt; 0.60</td><td class="verdict-low">low</td><td>High variance between sessions — normal human operation</td></tr>
-        <tr><td>-</td><td class="verdict-medium">medium</td><td>Insufficient data (&lt; 2 valid sessions with 3+ clicks)</td></tr>
+        <tr><th>{{ L.triage_report_cv_range }}</th><th>{{ L.triage_report_verdict }}</th><th>{{ L.triage_report_meaning }}</th></tr>
+        <tr><td>&lt; 0.25</td><td class="verdict-high">{{ L.triage_report_high }}</td><td>{{ L.triage_report_verdict_high_desc }}</td></tr>
+        <tr><td>0.25 ~ 0.60</td><td class="verdict-medium">{{ L.triage_report_medium }}</td><td>{{ L.triage_report_verdict_medium_desc }}</td></tr>
+        <tr><td>&gt; 0.60</td><td class="verdict-low">{{ L.triage_report_low }}</td><td>{{ L.triage_report_verdict_low_desc }}</td></tr>
+        <tr><td>-</td><td class="verdict-medium">{{ L.triage_report_medium }}</td><td>{{ L.triage_report_verdict_insufficient_desc }}</td></tr>
       </table>
 
-      <h3>Limitations</h3>
-      <p>Triage uses session CV only. Click concentration is not used in verdict because fixed-UI equipment shows high concentration regardless of automation. Sequence similarity (pHash-based) is unavailable without image data.</p>
-      <p>Data source is the <strong>snapshotlist</strong> table (TTL 15 days). A triage <span class="verdict-high">high</span> is a candidate for full analysis, not a final determination.</p>
+      <h3>{{ L.triage_report_limitations }}</h3>
+      <p>{{ L.triage_report_limitations_text }}</p>
+      <p>{{ L.triage_report_limitations_data }}</p>
 
-      <h3>Recommended Workflow</h3>
+      <h3>{{ L.triage_report_workflow }}</h3>
       <div class="guide-flow">
-        <span class="guide-flow-step">Triage (10,000+ equipment)</span>
+        <span class="guide-flow-step">{{ L.triage_report_workflow_step1 }}</span>
         <span class="guide-flow-arrow">&rarr;</span>
-        <span class="guide-flow-step">Filter high verdict</span>
+        <span class="guide-flow-step">{{ L.triage_report_workflow_step2 }}</span>
         <span class="guide-flow-arrow">&rarr;</span>
-        <span class="guide-flow-step">Full analysis (3-signal)</span>
+        <span class="guide-flow-step">{{ L.triage_report_workflow_step3 }}</span>
       </div>
     </div>
   </div>
 
   <!-- Process → Model → Equipment hierarchy -->
-  <h2 style="font-size:18px; margin-bottom:16px;">Process / Model Groups</h2>
+  <h2 style="font-size:18px; margin-bottom:16px;">{{ L.triage_report_groups_title }}</h2>
   {% for p in report.processes %}
   <div class="process-group">
     <div class="process-header" onclick="this.parentElement.classList.toggle('open')">
-      <span class="process-title">{{ p.process }} <span style="color:var(--text-muted); font-weight:400; font-size:13px;">({{ p.equipment_count }} equipment, {{ p.models|length }} models)</span></span>
+      <span class="process-title">{{ p.process }} <span style="color:var(--text-muted); font-weight:400; font-size:13px;">({{ p.equipment_count }} {{ L.triage_report_equipment }}, {{ p.models|length }} {{ L.triage_report_models }})</span></span>
       <div class="group-badges">
         {% if p.high_count %}<span class="badge badge-high">H:{{ p.high_count }}</span>{% endif %}
         {% if p.medium_count %}<span class="badge badge-medium">M:{{ p.medium_count }}</span>{% endif %}
@@ -262,7 +254,7 @@
         </div>
         <div class="model-body">
           <table>
-            <tr><th>EqpID</th><th class="num">Clicks</th><th class="num">Sessions</th><th class="num">Days</th><th class="num">Concentration</th><th class="num">CV</th><th>Verdict</th></tr>
+            <tr><th>{{ L.triage_report_eqpid }}</th><th class="num">{{ L.triage_report_col_clicks }}</th><th class="num">{{ L.triage_report_col_sessions }}</th><th class="num">{{ L.triage_report_col_days }}</th><th class="num">{{ L.triage_report_col_concentration }}</th><th class="num">{{ L.triage_report_col_cv }}</th><th>{{ L.triage_report_verdict }}</th></tr>
             {% for r in m.results %}
             <tr>
               <td>{{ r.eqpid }}</td>
@@ -272,7 +264,7 @@
               <td class="num">{% if r.click_concentration is not none %}{{ "%.2f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
               <td class="num">{% if r.session_cv is not none %}{{ "%.2f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
               <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
-                {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
+                {% if r.error %}{{ L.triage_report_error }}{% else %}{{ L['triage_report_' + r.verdict] }}{% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -284,78 +276,13 @@
   </div>
   {% endfor %}
 
-  <!-- Full Equipment Table -->
-  <h2 style="font-size:18px; margin: 32px 0 8px;">All Equipment</h2>
-
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterTable('all', this)">All</button>
-    <button class="filter-btn" onclick="filterTable('high', this)">High</button>
-    <button class="filter-btn" onclick="filterTable('medium', this)">Medium</button>
-    <button class="filter-btn" onclick="filterTable('low', this)">Low</button>
-    <button class="filter-btn" onclick="filterTable('error', this)">Error</button>
-  </div>
-
-  <table id="main-table">
-    <thead>
-      <tr>
-        <th onclick="sortTable(0)">Process</th>
-        <th onclick="sortTable(1)">Model</th>
-        <th onclick="sortTable(2)">EqpID</th>
-        <th onclick="sortTable(3)" class="num">Clicks</th>
-        <th onclick="sortTable(4)" class="num">Sessions</th>
-        <th onclick="sortTable(5)" class="num">Days</th>
-        <th onclick="sortTable(6)" class="num">Concentration</th>
-        <th onclick="sortTable(7)" class="num">CV</th>
-        <th onclick="sortTable(8)">Verdict</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in report.all_results %}
-      <tr data-verdict="{% if r.error %}error{% else %}{{ r.verdict }}{% endif %}">
-        <td>{{ r.process }}</td>
-        <td>{{ r.model }}</td>
-        <td>{{ r.eqpid }}</td>
-        <td class="num">{{ r.total_clicks }}</td>
-        <td class="num">{{ r.session_count }}</td>
-        <td class="num">{{ r.data_days }}</td>
-        <td class="num">{% if r.click_concentration is not none %}{{ "%.4f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
-        <td class="num">{% if r.session_cv is not none %}{{ "%.4f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
-        <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
-          {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
   <div class="meta">
-    Generated by SnapshotScreener Triage Mode
+    {{ L.triage_report_footer }}
   </div>
 </div>
 
 <script>
-function filterTable(v, btn) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('#main-table tbody tr').forEach(tr => {
-    tr.style.display = (v === 'all' || tr.dataset.verdict === v) ? '' : 'none';
-  });
-}
-
-let sortDir = {};
-function sortTable(col) {
-  const tbody = document.querySelector('#main-table tbody');
-  const rows = Array.from(tbody.rows);
-  const dir = sortDir[col] = !(sortDir[col] || false);
-  rows.sort((a, b) => {
-    let va = a.cells[col].textContent.trim();
-    let vb = b.cells[col].textContent.trim();
-    const na = parseFloat(va), nb = parseFloat(vb);
-    if (!isNaN(na) && !isNaN(nb)) return dir ? na - nb : nb - na;
-    return dir ? va.localeCompare(vb) : vb.localeCompare(va);
-  });
-  rows.forEach(r => tbody.appendChild(r));
-}
+/* Process/Model toggle is handled by inline onclick */
 </script>
 </body>
 </html>
