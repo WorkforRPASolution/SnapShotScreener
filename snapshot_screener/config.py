@@ -1,4 +1,4 @@
-"""Configuration dataclass for SnapshotScreener."""
+"""Configuration dataclasses for SnapshotScreener."""
 from dataclasses import dataclass
 from datetime import date
 from typing import Optional, List
@@ -96,3 +96,69 @@ class ScreenerConfig:
             else:
                 fields.append(f"{f}={value!r}")
         return f"ScreenerConfig({', '.join(fields)})"
+
+
+@dataclass(frozen=True)
+class TriageConfig:
+    """Immutable configuration for a triage screening run.
+
+    Uses the ``snapshotlist`` table (monthly partitions, no images)
+    for lightweight fleet-wide screening.
+    """
+
+    # Equipment CSV (순서 기반: 1열=process, 2열=model, 3열=eqpid)
+    csv_path: str
+    date_from: date
+    date_to: date
+
+    # Cassandra
+    db_host: str
+    db_keyspace: str
+    db_snapshotlist_table: str = "snapshotlist"
+    db_port: int = 9042
+    db_username: Optional[str] = None
+    db_password: Optional[str] = None
+    fname_delay_ms: int = 50
+    # Fields below satisfy CassandraConfigProtocol
+    read_delay_ms: int = 50
+    db_table: str = "snapshotlist"
+    max_connections: int = 2
+
+    # Analysis
+    session_gap_ms: int = 900_000
+    dbscan_eps: float = 0.03
+    dbscan_min_samples: int = 2
+    screen_width: int = 1920
+    screen_height: int = 1080
+    fname_pattern: str = "auto"
+
+    # Output
+    output_dir: str = "."
+
+    # Resilience
+    circuit_breaker_threshold: int = 10
+    health_check_interval: int = 500
+
+    # General
+    verbose: bool = False
+    lang: str = "ko"
+
+    def __post_init__(self) -> None:
+        if not self.csv_path:
+            raise ValueError("csv_path must not be empty")
+        if self.date_from > self.date_to:
+            raise ValueError(
+                f"date_from ({self.date_from}) must be <= date_to ({self.date_to})"
+            )
+        if self.lang not in ("ko", "en"):
+            raise ValueError(f"lang must be 'ko' or 'en', got {self.lang!r}")
+
+    def __repr__(self) -> str:
+        fields = []
+        for f in self.__dataclass_fields__:
+            value = getattr(self, f)
+            if f == "db_password" and value is not None:
+                fields.append(f"{f}='****'")
+            else:
+                fields.append(f"{f}={value!r}")
+        return f"TriageConfig({', '.join(fields)})"

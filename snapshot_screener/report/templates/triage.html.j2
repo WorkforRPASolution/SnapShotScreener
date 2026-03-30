@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="{{ config.lang }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnapshotScreener Triage Report</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-card-hover: #1f2330;
+    --border: #2a2d3a;
+    --border-light: #353849;
+    --text: #e4e6ed;
+    --text-dim: #8b8fa3;
+    --text-muted: #5c6072;
+    --accent: #4e8cff;
+    --accent-dim: rgba(78,140,255,0.12);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+  }
+  .header {
+    background: linear-gradient(135deg, #161822 0%, #1a1f35 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 0 40px;
+  }
+  .inner { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; }
+
+  /* Summary cards */
+  .cards { display: flex; gap: 16px; margin: 32px 0; flex-wrap: wrap; }
+  .card {
+    flex: 1; min-width: 140px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+  }
+  .card-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-value { font-size: 32px; font-weight: 700; margin-top: 4px; }
+  .card-high .card-value { color: var(--green); }
+  .card-medium .card-value { color: var(--amber); }
+  .card-low .card-value { color: var(--red); }
+  .card-error .card-value { color: var(--text-muted); }
+  .card-total .card-value { color: var(--accent); }
+
+  /* Groups */
+  .group { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; }
+  .group-header {
+    padding: 16px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  }
+  .group-header:hover { background: var(--bg-card-hover); border-radius: 12px; }
+  .group-title { font-weight: 600; font-size: 15px; }
+  .group-badges { display: flex; gap: 8px; }
+  .badge {
+    font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 600;
+  }
+  .badge-high { background: var(--green-dim); color: var(--green); }
+  .badge-medium { background: var(--amber-dim); color: var(--amber); }
+  .badge-low { background: var(--red-dim); color: var(--red); }
+  .group-body { display: none; padding: 0 24px 16px; }
+  .group.open .group-body { display: block; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-dim); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: var(--bg-card-hover); }
+  .verdict-high { color: var(--green); font-weight: 600; }
+  .verdict-medium { color: var(--amber); }
+  .verdict-low { color: var(--red); }
+  .verdict-error { color: var(--text-muted); font-style: italic; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Filter */
+  .filter-bar { margin: 24px 0 16px; display: flex; gap: 8px; }
+  .filter-btn {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .meta { color: var(--text-muted); font-size: 12px; margin-top: 32px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="inner">
+    <h1>SnapshotScreener Triage Report</h1>
+    <div class="subtitle">
+      {{ report.date_from }} ~ {{ report.date_to }}
+      &nbsp;|&nbsp; {{ report.total_equipment }} equipment
+      &nbsp;|&nbsp; {{ report.scan_duration_s }}s
+      &nbsp;|&nbsp; {{ report.generated_at }}
+    </div>
+  </div>
+</div>
+
+<div class="inner">
+  <!-- Summary Cards -->
+  <div class="cards">
+    <div class="card card-total">
+      <div class="card-label">Total</div>
+      <div class="card-value">{{ report.total_equipment }}</div>
+    </div>
+    <div class="card card-high">
+      <div class="card-label">High</div>
+      <div class="card-value">{{ report.high_count }}</div>
+    </div>
+    <div class="card card-medium">
+      <div class="card-label">Medium</div>
+      <div class="card-value">{{ report.medium_count }}</div>
+    </div>
+    <div class="card card-low">
+      <div class="card-label">Low</div>
+      <div class="card-value">{{ report.low_count }}</div>
+    </div>
+    <div class="card card-error">
+      <div class="card-label">Error</div>
+      <div class="card-value">{{ report.error_count }}</div>
+    </div>
+  </div>
+
+  <!-- Process/Model Groups -->
+  <h2 style="font-size:18px; margin-bottom:16px;">Process / Model Groups</h2>
+  {% for g in report.groups %}
+  <div class="group" onclick="this.classList.toggle('open')">
+    <div class="group-header">
+      <span class="group-title">{{ g.process }} / {{ g.model }} ({{ g.equipment_count }})</span>
+      <div class="group-badges">
+        {% if g.high_count %}<span class="badge badge-high">H:{{ g.high_count }}</span>{% endif %}
+        {% if g.medium_count %}<span class="badge badge-medium">M:{{ g.medium_count }}</span>{% endif %}
+        {% if g.low_count %}<span class="badge badge-low">L:{{ g.low_count }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="group-body">
+      <table>
+        <tr><th>EqpID</th><th class="num">Clicks</th><th class="num">Sessions</th><th class="num">Days</th><th class="num">Concentration</th><th class="num">CV</th><th>Verdict</th></tr>
+        {% for r in g.results %}
+        <tr>
+          <td>{{ r.eqpid }}</td>
+          <td class="num">{{ r.total_clicks }}</td>
+          <td class="num">{{ r.session_count }}</td>
+          <td class="num">{{ r.data_days }}</td>
+          <td class="num">{% if r.click_concentration is not none %}{{ "%.2f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
+          <td class="num">{% if r.session_cv is not none %}{{ "%.2f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
+          <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
+            {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Full Equipment Table -->
+  <h2 style="font-size:18px; margin: 32px 0 8px;">All Equipment</h2>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterTable('all', this)">All</button>
+    <button class="filter-btn" onclick="filterTable('high', this)">High</button>
+    <button class="filter-btn" onclick="filterTable('medium', this)">Medium</button>
+    <button class="filter-btn" onclick="filterTable('low', this)">Low</button>
+    <button class="filter-btn" onclick="filterTable('error', this)">Error</button>
+  </div>
+
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)">Process</th>
+        <th onclick="sortTable(1)">Model</th>
+        <th onclick="sortTable(2)">EqpID</th>
+        <th onclick="sortTable(3)" class="num">Clicks</th>
+        <th onclick="sortTable(4)" class="num">Sessions</th>
+        <th onclick="sortTable(5)" class="num">Days</th>
+        <th onclick="sortTable(6)" class="num">Concentration</th>
+        <th onclick="sortTable(7)" class="num">CV</th>
+        <th onclick="sortTable(8)">Verdict</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in report.all_results %}
+      <tr data-verdict="{% if r.error %}error{% else %}{{ r.verdict }}{% endif %}">
+        <td>{{ r.process }}</td>
+        <td>{{ r.model }}</td>
+        <td>{{ r.eqpid }}</td>
+        <td class="num">{{ r.total_clicks }}</td>
+        <td class="num">{{ r.session_count }}</td>
+        <td class="num">{{ r.data_days }}</td>
+        <td class="num">{% if r.click_concentration is not none %}{{ "%.4f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
+        <td class="num">{% if r.session_cv is not none %}{{ "%.4f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
+        <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
+          {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="meta">
+    Generated by SnapshotScreener Triage Mode
+  </div>
+</div>
+
+<script>
+function filterTable(v, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#main-table tbody tr').forEach(tr => {
+    tr.style.display = (v === 'all' || tr.dataset.verdict === v) ? '' : 'none';
+  });
+}
+
+let sortDir = {};
+function sortTable(col) {
+  const tbody = document.querySelector('#main-table tbody');
+  const rows = Array.from(tbody.rows);
+  const dir = sortDir[col] = !(sortDir[col] || false);
+  rows.sort((a, b) => {
+    let va = a.cells[col].textContent.trim();
+    let vb = b.cells[col].textContent.trim();
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) return dir ? na - nb : nb - na;
+    return dir ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+</script>
+</body>
+</html>

@@ -74,6 +74,10 @@ fname 메타데이터와 pHash만으로 "이 장비에 자동화 가능한 반�
 
 핵심 파라미터(pHash 임계값)를 범위 내에서 sweep하면서 결과의 안정성 자체를 메타 신호로 활용한다. 파라미터를 바꿔도 결과가 안 흔들리는 장비는 구조가 명확하므로, 분석 신뢰도 등급을 부여할 수 있다.
 
+### 트리아지 모드 — 대규모 Fleet 경량 스크리닝
+
+1만 대 이상의 장비를 이미지 읽기 없이 빠르게 스캔하여 자동화 패턴 가능성이 높은 장비를 선별한다. `snapshotlist` 테이블(월별 파티션, image 없음)을 사용하여 fname 메타데이터만으로 2개 신호(클릭 좌표 집중도, 세션 길이 CV)를 계산한다. 10,000대 기준 20~45분 소요.
+
 ### HTML 리포트 자동 생성
 
 분석 완료 후 self-contained HTML 리포트를 자동 생성한다. 대표 프레임 이미지, 클릭 좌표 오버레이, 스크리닝 신호, 민감도 분석 결과를 포함하며, 오프라인 환경에서 열 수 있다.
@@ -243,6 +247,40 @@ snapshot-screener \
 
 결과: 리포트에 Layer C 파라미터 민감도 분석 섹션이 추가된다.
 
+### 트리아지 모드 (대규모 Fleet 스크리닝)
+
+1만 대 이상의 장비를 이미지 읽기 없이 빠르게 스캔한다. 장비 계층(process/model) CSV 파일이 필요하다.
+
+**장비 CSV 형식** (열 순서 기반, 헤더명 무관):
+
+```csv
+process,model,eqpid
+PROCESS_A,MODEL_X,EQ-2471
+PROCESS_A,MODEL_X,EQ-2472
+PROCESS_B,MODEL_Y,EQ-3100
+```
+
+```bash
+# 트리아지 실행
+snapshot-screener --triage \
+  --csv equipment.csv \
+  --from 2026-03-15 --to 2026-03-29 \
+  --db-host 10.0.1.50 --db-keyspace ars \
+  --output-dir ./triage_output
+
+# 날짜 생략 시 최근 14일 자동 설정
+snapshot-screener --triage \
+  --csv equipment.csv \
+  --db-host 10.0.1.50 --db-keyspace ars
+```
+
+결과: `TriageReport_*.csv` + `TriageReport_*.json` + `TriageReport_*.html` 생성
+
+**안전장치:**
+- 톰스톤 회피 쿼리 (`fname >= ?`)로 TTL 만료 행 스캔 방지
+- 회로 차단기: Cassandra 연속 실패 시 자동 중단 + 부분 결과 저장
+- JSONL 저널: 장비별 결과 즉시 기록, Ctrl+C에도 부분 결과 보존
+
 ### 출력 파일 확인
 
 ```bash
@@ -251,6 +289,9 @@ ls SnapshotScreener_EQ-2471_*.html
 
 # 일괄 스크리닝 요약 리포트
 ls SnapshotScreener_Summary_*.html
+
+# 트리아지 리포트
+ls TriageReport_*.html TriageReport_*.csv TriageReport_*.json
 
 # pHash 캐시 (SQLite)
 ls phash_cache.db
@@ -319,6 +360,25 @@ config 파일을 지정하면 파일에 정의된 값이 기본값으로 적용�
 | `--invalidate-cache` | (플래그) | pHash 캐시 전체 무효화 후 재계산 |
 | `--verbose` | (플래그) | 디버그 로깅 활성화 |
 | `--lang` | ko | 출력 언어 (`ko` 한국어, `en` English). 콘솔 로그, HTML 리포트, 에러 메시지에 적용 |
+
+### 트리아지 모드 파라미터
+
+| 파라미터 | 기본값 | 설명 |
+|----------|--------|------|
+| `--triage` | (플래그) | 트리아지 모드 활성화 |
+| `--csv` | (필수) | 장비 계층 CSV 파일 경로 (열 순서: process, model, eqpid) |
+| `--db-snapshotlist-table` | `snapshotlist` | snapshotlist 테이블명 |
+
+트리아지 모드에서는 `--eqpid`, `--eqpid-list`, `--db-table`, `--phash-*`, `--selector`, `--sensitivity-sweep`, `--cache-dir`, `--invalidate-cache` 인자가 무시된다. `--from`/`--to` 미지정 시 최근 14일이 자동 설정된다.
+
+**snapshotlist 테이블 요구 스키마:**
+
+```
+Partition Key: (eqpid, year, month)
+Clustering Key: fname (ASC)
+```
+
+`fname` 컬럼만 사용하며, image 데이터는 불필요하다. 테이블의 TTL이 15일이므로 최근 데이터만 조회 가능하다.
 
 ### 환경변수
 
@@ -795,6 +855,14 @@ SnapshotScreener/
 |   |   |-- __init__.py
 |   |   |-- cassandra_client.py     # Cassandra 클라이언트 (rate limiting 포함)
 |   |   |-- cache.py                # SQLite pHash 캐시
+|   |-- triage/
+|   |   |-- __init__.py
+|   |   |-- models.py               # 트리아지 결과 데이터 모델
+|   |   |-- csv_loader.py           # 장비 계층 CSV 파싱
+|   |   |-- collector.py            # snapshotlist 쿼리 + 톰스톤 회피
+|   |   |-- screening.py            # 2신호 경량 판정
+|   |   |-- pipeline.py             # 트리아지 파이프라인 오케스트레이션
+|   |   |-- report.py               # CSV/JSON/HTML 리포트 생성
 |   |-- report/
 |   |   |-- __init__.py
 |   |   |-- image_collector.py      # Phase 4: 대표 프레임 이미지 수집
@@ -831,3 +899,7 @@ SnapshotScreener/
 | CV (변동계수) | Coefficient of Variation. 표준편차를 평균으로 나눈 값으로, 상대적 변동성을 나타낸다 |
 | Rate Limiting | Cassandra 쿼리 간 의도적 지연을 두어 부하를 제한하는 메커니즘 |
 | 포인트 쿼리 | 파티션 키 전체를 지정하여 단일 파티션만 읽는 쿼리. 풀스캔과 대비되는 개념이다 |
+| 트리아지 모드 | 이미지를 읽지 않고 fname 메타데이터만으로 대규모 장비를 경량 스크리닝하는 모드. snapshotlist 테이블(월별 파티션)을 사용한다 |
+| snapshotlist | 월별 파티션 `(eqpid, year, month)`으로 fname 목록만 저장하는 경량 Cassandra 테이블. image 컬럼 없음, TTL 15일 |
+| 회로 차단기 | Circuit Breaker. Cassandra 연속 장애 시 불필요한 retry를 방지하고 조기 중단하는 안전장치 |
+| 톰스톤 | Cassandra에서 TTL 만료된 행의 삭제 마커. 읽기 시 스캔 비용을 유발하며, `fname >= ?` 범위 필터로 회피한다 |

@@ -45,33 +45,29 @@ def compute_screening(features: List[FrameFeature]) -> ScreeningResult:
     total = len(features)
 
     # --- FR-11: Click concentration ---
-    click_concentration, click_concentration_level = _click_concentration(features, total)
+    cc_val, cc_level = click_concentration(features, total)
 
     # --- FR-12: Session CV ---
-    session_cv, session_cv_level = _session_cv(features)
+    cv_val, cv_level = session_cv(features)
 
     # --- FR-13: LCS Similarity ---
-    sequence_similarity, sequence_similarity_level = _sequence_similarity(features)
+    seq_val, seq_level = sequence_similarity(features)
 
     # --- FR-14: Verdict ---
-    verdict = _verdict(
-        click_concentration_level,
-        session_cv_level,
-        sequence_similarity_level,
-    )
+    vrd = verdict(cc_level, cv_level, seq_level)
 
     return ScreeningResult(
-        click_concentration=click_concentration,
-        click_concentration_level=click_concentration_level,
-        session_cv=session_cv,
-        session_cv_level=session_cv_level,
-        sequence_similarity=sequence_similarity,
-        sequence_similarity_level=sequence_similarity_level,
-        verdict=verdict,
+        click_concentration=cc_val,
+        click_concentration_level=cc_level,
+        session_cv=cv_val,
+        session_cv_level=cv_level,
+        sequence_similarity=seq_val,
+        sequence_similarity_level=seq_level,
+        verdict=vrd,
     )
 
 
-def _click_concentration(
+def click_concentration(
     features: List[FrameFeature], total: int
 ) -> tuple[float | None, str]:
     if total < 10:
@@ -87,7 +83,7 @@ def _click_concentration(
     return concentration, level
 
 
-def _session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
+def session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
     session_counts: dict[str, int] = defaultdict(int)
     for f in features:
         session_counts[f.session_id] += 1
@@ -111,7 +107,7 @@ def _session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
     return cv, level
 
 
-def _sequence_similarity(features: List[FrameFeature]) -> tuple[float | None, str]:
+def sequence_similarity(features: List[FrameFeature]) -> tuple[float | None, str]:
     # Build screen_group_id sequence per session
     session_seqs: dict[str, list[str | None]] = defaultdict(list)
     for f in features:
@@ -149,7 +145,7 @@ def _sequence_similarity(features: List[FrameFeature]) -> tuple[float | None, st
     return mean_sim, level
 
 
-def _verdict(
+def verdict(
     click_level: str,
     cv_level: str,
     seq_level: str,

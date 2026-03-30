@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import logging
+import socket
 import time
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, Protocol, TYPE_CHECKING, runtime_checkable
 
 from cassandra import (
     InvalidRequest,
@@ -30,10 +31,30 @@ except ImportError:
     PoolingOptions = None  # type: ignore[assignment,misc]
 from cassandra.query import ConsistencyLevel
 
-from snapshot_screener.config import ScreenerConfig
 from snapshot_screener.i18n import t
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Config protocol — satisfied by both ScreenerConfig and TriageConfig
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class CassandraConfigProtocol(Protocol):
+    """Minimal interface for Cassandra connection configuration."""
+
+    db_host: str
+    db_port: int
+    db_keyspace: str
+    db_table: str
+    db_username: Optional[str]
+    db_password: Optional[str]
+    fname_delay_ms: int
+    read_delay_ms: int
+    lang: str
+
 
 # ---------------------------------------------------------------------------
 # Hardcoded CQL queries (SELECT only) — format templates filled at prepare
@@ -45,6 +66,10 @@ _Q_FNAMES = (
 _Q_IMAGE = (
     "SELECT image FROM {ks}.{tbl} "
     "WHERE eqpid=? AND year=? AND month=? AND day=? AND fname=?"
+)
+_Q_SNAPSHOTLIST = (
+    "SELECT fname FROM {ks}.{tbl} "
+    "WHERE eqpid=? AND year=? AND month=? AND fname >= ?"
 )
 
 # Transient errors worth retrying
@@ -64,8 +89,14 @@ class CassandraClient:
             image  = db.query_image("EQ-01", 2024, 1, 15, fnames[0])
     """
 
-    def __init__(self, config: ScreenerConfig) -> None:
+    def __init__(
+        self,
+        config: CassandraConfigProtocol,
+        *,
+        snapshotlist_table: Optional[str] = None,
+    ) -> None:
         self._config = config
+        self._snapshotlist_table = snapshotlist_table
 
         # Auth (optional)
         auth_provider = None
@@ -83,6 +114,8 @@ class CassandraClient:
             auth_provider=auth_provider,
             connect_timeout=10,
             connection_class=_DefaultConnection,
+            idle_heartbeat_interval=30,
+            sockopts=[(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)],
         )
 
         if PoolingOptions is not None:
@@ -99,6 +132,7 @@ class CassandraClient:
         self._session = None
         self._prep_fnames = None
         self._prep_image = None
+        self._prep_snapshotlist = None
 
     # ------------------------------------------------------------------
     # Context manager
@@ -137,6 +171,25 @@ class CassandraClient:
             raise ConnectionError(
                 t("error.cassandra_prepare", self._config.lang).format(ks=ks, tbl=tbl, exc=exc)
             ) from exc
+
+        # Prepare snapshotlist statement (triage mode only)
+        if self._snapshotlist_table:
+            try:
+                self._prep_snapshotlist = self._session.prepare(
+                    _Q_SNAPSHOTLIST.format(
+                        ks=ks, tbl=self._snapshotlist_table
+                    )
+                )
+                self._prep_snapshotlist.consistency_level = (
+                    ConsistencyLevel.LOCAL_ONE
+                )
+                self._prep_snapshotlist.fetch_size = 5000
+            except InvalidRequest as exc:
+                self._cluster.shutdown()
+                raise ConnectionError(
+                    f"snapshotlist table '{self._snapshotlist_table}' "
+                    f"not found in keyspace '{ks}': {exc}"
+                ) from exc
 
         # Health check
         try:
@@ -187,6 +240,40 @@ class CassandraClient:
         if result is None:
             return None
         return result.image
+
+    def query_snapshotlist(
+        self,
+        eqpid: str,
+        year: int,
+        month: int,
+        fname_min: str = "",
+    ) -> List[str]:
+        """Return filenames from the snapshotlist table.
+
+        Uses ``fname >= fname_min`` to skip tombstoned rows from
+        expired TTL entries at the beginning of the partition.
+        """
+        assert self._prep_snapshotlist is not None, (
+            "snapshotlist statement not prepared — "
+            "pass snapshotlist_table to CassandraClient"
+        )
+        rows = self._execute_with_retry(
+            self._prep_snapshotlist, (eqpid, year, month, fname_min)
+        )
+        result = [row.fname for row in rows]
+        time.sleep(self._config.fname_delay_ms / 1000)
+        return result
+
+    def health_check(self) -> bool:
+        """Execute a lightweight query to verify the connection is alive."""
+        try:
+            self._session.execute(
+                "SELECT release_version FROM system.local"
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Health check failed: %s", exc)
+            return False
 
     # ------------------------------------------------------------------
     # Retry logic (private)

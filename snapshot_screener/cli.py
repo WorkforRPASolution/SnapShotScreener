@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from snapshot_screener.config import ScreenerConfig
+from snapshot_screener.config import ScreenerConfig, TriageConfig
 from snapshot_screener.i18n import t
 from snapshot_screener.utils.progress import get_logger, setup_logging
 
@@ -274,6 +274,26 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="출력 언어 (ko/en, 기본값: ko)",
     )
 
+    # ---- Triage mode ----
+    parser.add_argument(
+        "--triage",
+        action="store_true",
+        default=False,
+        help="트리아지 모드 활성화 (경량 fleet-wide 스크리닝)",
+    )
+    parser.add_argument(
+        "--csv",
+        type=str,
+        metavar="FILE",
+        help="장비 계층 CSV 파일 경로 (열 순서: process, model, eqpid)",
+    )
+    parser.add_argument(
+        "--db-snapshotlist-table",
+        type=str,
+        default="snapshotlist",
+        help="snapshotlist 테이블명 (기본값: snapshotlist)",
+    )
+
     return parser.parse_args(argv), parser
 
 
@@ -415,6 +435,76 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
     )
 
 
+def build_triage_config(
+    args: argparse.Namespace, parser: argparse.ArgumentParser = None
+) -> TriageConfig:
+    """Build a :class:`TriageConfig` from CLI args (optionally merged with YAML)."""
+    if args.config:
+        yaml_cfg = _load_yaml_config(args.config)
+        if parser is not None:
+            cfg = _merge_config(yaml_cfg, args, parser)
+        else:
+            cfg = yaml_cfg
+    else:
+        cfg = vars(args)
+
+    lang = cfg.get("lang", "ko")
+
+    csv_path = cfg.get("csv")
+    if not csv_path:
+        raise ValueError("트리아지 모드에서 --csv 는 필수입니다")
+
+    # Resolve dates — auto-default to last 14 days if not specified
+    date_from = cfg.get("date_from")
+    date_to = cfg.get("date_to")
+    if isinstance(date_from, str):
+        date_from = datetime.strptime(date_from, "%Y-%m-%d").date()
+    if isinstance(date_to, str):
+        date_to = datetime.strptime(date_to, "%Y-%m-%d").date()
+    if date_from is None or date_to is None:
+        from datetime import timedelta
+        date_to = date_to or (date.today() - timedelta(days=1))
+        date_from = date_from or (date_to - timedelta(days=13))
+
+    db_host = cfg.get("db_host")
+    if not db_host:
+        raise ValueError(t("error.missing_db_host", lang))
+    db_keyspace = cfg.get("db_keyspace")
+    if not db_keyspace:
+        raise ValueError(t("error.missing_db_keyspace", lang))
+
+    db_password = cfg.get("db_password")
+    if db_password is None:
+        db_password = os.environ.get("SS_DB_PASSWORD")
+
+    return TriageConfig(
+        csv_path=csv_path,
+        date_from=date_from,
+        date_to=date_to,
+        db_host=db_host,
+        db_keyspace=db_keyspace,
+        db_snapshotlist_table=cfg.get("db_snapshotlist_table", "snapshotlist"),
+        db_port=cfg.get("db_port", 9042),
+        db_username=cfg.get("db_username"),
+        db_password=db_password,
+        fname_delay_ms=cfg.get("fname_delay_ms", 50),
+        read_delay_ms=cfg.get("read_delay_ms", 50),
+        db_table=cfg.get("db_snapshotlist_table", "snapshotlist"),
+        max_connections=cfg.get("max_connections", 2),
+        session_gap_ms=cfg.get("session_gap_ms", 900_000),
+        dbscan_eps=cfg.get("dbscan_eps", 0.03),
+        dbscan_min_samples=cfg.get("dbscan_min_samples", 2),
+        screen_width=cfg.get("screen_width", 1920),
+        screen_height=cfg.get("screen_height", 1080),
+        fname_pattern=cfg.get("fname_pattern", "auto"),
+        output_dir=cfg.get("output_dir", "."),
+        circuit_breaker_threshold=cfg.get("circuit_breaker_threshold", 10),
+        health_check_interval=cfg.get("health_check_interval", 500),
+        verbose=cfg.get("verbose", False),
+        lang=lang,
+    )
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """Entry point for the snapshot-screener CLI.
 
@@ -428,13 +518,37 @@ def main(argv: Optional[List[str]] = None) -> int:
     int
         Exit code: 0 success, 1 user error, 2 analysis error, 3 connection failure.
     """
-    # Lazy import to avoid circular dependency at module level
-    from snapshot_screener.pipeline import run_pipeline
-
     args, parser = parse_args(argv)
     setup_logging(args.verbose)
 
     lang = getattr(args, "lang", "ko")
+
+    # ---- Triage mode ----
+    if getattr(args, "triage", False):
+        from snapshot_screener.triage.pipeline import run_triage
+
+        try:
+            triage_config = build_triage_config(args, parser)
+            lang = triage_config.lang
+        except (ValueError, argparse.ArgumentTypeError) as e:
+            logger.error(t("error.config_error", lang).format(e=e))
+            return 1
+
+        try:
+            run_triage(triage_config)
+            return 0
+        except KeyboardInterrupt:
+            logger.info(t("error.interrupted", lang))
+            return 130
+        except ConnectionError as e:
+            logger.error(t("error.cassandra_failed", lang).format(e=e))
+            return 3
+        except Exception as e:
+            logger.error(t("error.analysis_error", lang).format(e=e))
+            return 2
+
+    # ---- Normal mode ----
+    from snapshot_screener.pipeline import run_pipeline
 
     try:
         config = build_config(args, parser)
