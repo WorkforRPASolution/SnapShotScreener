@@ -12,7 +12,8 @@ from jinja2 import Environment, FileSystemLoader, PackageLoader
 
 from snapshot_screener.triage.models import (
     TriageEquipmentResult,
-    TriageGroupSummary,
+    TriageModelSummary,
+    TriageProcessSummary,
     TriageReport,
 )
 from snapshot_screener.utils.progress import get_logger
@@ -37,24 +38,37 @@ def build_triage_report(
     low = sum(1 for r in results if r.verdict == "low" and not r.error)
     errors = sum(1 for r in results if r.error)
 
-    # Build groups
-    group_map: Dict[Tuple[str, str], List[TriageEquipmentResult]] = defaultdict(list)
+    # Build hierarchical groups: Process → Model → Equipment
+    proc_model_map: Dict[str, Dict[str, List[TriageEquipmentResult]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for r in results:
-        group_map[(r.process, r.model)].append(r)
+        proc_model_map[r.process][r.model].append(r)
 
-    groups: List[TriageGroupSummary] = []
-    for (process, model), members in sorted(group_map.items()):
-        g = TriageGroupSummary(
+    processes: List[TriageProcessSummary] = []
+    for process in sorted(proc_model_map):
+        model_map = proc_model_map[process]
+        model_summaries: List[TriageModelSummary] = []
+        for model in sorted(model_map):
+            members = model_map[model]
+            model_summaries.append(TriageModelSummary(
+                model=model,
+                equipment_count=len(members),
+                high_count=sum(1 for r in members if r.verdict == "high" and not r.error),
+                medium_count=sum(1 for r in members if r.verdict == "medium" and not r.error),
+                low_count=sum(1 for r in members if r.verdict == "low" and not r.error),
+                error_count=sum(1 for r in members if r.error),
+                results=members,
+            ))
+        processes.append(TriageProcessSummary(
             process=process,
-            model=model,
-            equipment_count=len(members),
-            high_count=sum(1 for r in members if r.verdict == "high" and not r.error),
-            medium_count=sum(1 for r in members if r.verdict == "medium" and not r.error),
-            low_count=sum(1 for r in members if r.verdict == "low" and not r.error),
-            error_count=sum(1 for r in members if r.error),
-            results=members,
-        )
-        groups.append(g)
+            equipment_count=sum(m.equipment_count for m in model_summaries),
+            high_count=sum(m.high_count for m in model_summaries),
+            medium_count=sum(m.medium_count for m in model_summaries),
+            low_count=sum(m.low_count for m in model_summaries),
+            error_count=sum(m.error_count for m in model_summaries),
+            models=model_summaries,
+        ))
 
     report = TriageReport(
         date_from=str(config.date_from),
@@ -66,7 +80,7 @@ def build_triage_report(
         medium_count=medium,
         low_count=low,
         error_count=errors,
-        groups=groups,
+        processes=processes,
         all_results=results,
     )
 
@@ -149,17 +163,27 @@ def _write_json(report: TriageReport, path: Path) -> None:
             "low_count": report.low_count,
             "error_count": report.error_count,
         },
-        "groups": [
+        "processes": [
             {
-                "process": g.process,
-                "model": g.model,
-                "equipment_count": g.equipment_count,
-                "high_count": g.high_count,
-                "medium_count": g.medium_count,
-                "low_count": g.low_count,
-                "error_count": g.error_count,
+                "process": p.process,
+                "equipment_count": p.equipment_count,
+                "high_count": p.high_count,
+                "medium_count": p.medium_count,
+                "low_count": p.low_count,
+                "error_count": p.error_count,
+                "models": [
+                    {
+                        "model": m.model,
+                        "equipment_count": m.equipment_count,
+                        "high_count": m.high_count,
+                        "medium_count": m.medium_count,
+                        "low_count": m.low_count,
+                        "error_count": m.error_count,
+                    }
+                    for m in p.models
+                ],
             }
-            for g in report.groups
+            for p in report.processes
         ],
         "equipment": [_result_dict(r) for r in report.all_results],
     }

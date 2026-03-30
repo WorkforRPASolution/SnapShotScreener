@@ -52,13 +52,25 @@
   .card-error .card-value { color: var(--text-muted); }
   .card-total .card-value { color: var(--accent); }
 
-  /* Groups */
-  .group { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; }
-  .group-header {
+  /* Process / Model hierarchy */
+  .process-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; }
+  .process-header {
     padding: 16px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
   }
-  .group-header:hover { background: var(--bg-card-hover); border-radius: 12px; }
-  .group-title { font-weight: 600; font-size: 15px; }
+  .process-header:hover { background: var(--bg-card-hover); border-radius: 12px; }
+  .process-title { font-weight: 700; font-size: 15px; }
+  .process-body { display: none; padding: 0 16px 16px; }
+  .process-group.open .process-body { display: block; }
+
+  .model-group { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; }
+  .model-header {
+    padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  }
+  .model-header:hover { background: var(--bg-card-hover); border-radius: 8px; }
+  .model-title { font-weight: 600; font-size: 14px; color: var(--text-dim); }
+  .model-body { display: none; padding: 0 20px 12px; }
+  .model-group.open .model-body { display: block; }
+
   .group-badges { display: flex; gap: 8px; }
   .badge {
     font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 600;
@@ -66,8 +78,7 @@
   .badge-high { background: var(--green-dim); color: var(--green); }
   .badge-medium { background: var(--amber-dim); color: var(--amber); }
   .badge-low { background: var(--red-dim); color: var(--red); }
-  .group-body { display: none; padding: 0 24px 16px; }
-  .group.open .group-body { display: block; }
+  .badge-count { background: var(--accent-dim); color: var(--accent); }
 
   /* Table */
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -95,6 +106,33 @@
   .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
   .meta { color: var(--text-muted); font-size: 12px; margin-top: 32px; }
+
+  /* Guide */
+  .guide { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin: 32px 0; }
+  .guide-header {
+    padding: 16px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  }
+  .guide-header:hover { background: var(--bg-card-hover); border-radius: 12px; }
+  .guide-title { font-weight: 600; font-size: 15px; }
+  .guide-toggle { color: var(--text-dim); font-size: 13px; }
+  .guide-body { display: none; padding: 0 24px 24px; }
+  .guide.open .guide-body { display: block; }
+  .guide-body h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--accent); }
+  .guide-body p { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; line-height: 1.7; }
+  .guide-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 16px; }
+  .guide-table th {
+    text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase;
+    cursor: default;
+  }
+  .guide-table th:hover { color: var(--text-dim); }
+  .guide-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .guide-flow { display: flex; align-items: center; gap: 12px; margin: 12px 0; font-size: 13px; flex-wrap: wrap; }
+  .guide-flow-step {
+    background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent);
+    padding: 6px 14px; border-radius: 8px; font-weight: 600;
+  }
+  .guide-flow-arrow { color: var(--text-muted); font-size: 18px; }
 </style>
 </head>
 <body>
@@ -136,35 +174,112 @@
     </div>
   </div>
 
-  <!-- Process/Model Groups -->
-  <h2 style="font-size:18px; margin-bottom:16px;">Process / Model Groups</h2>
-  {% for g in report.groups %}
-  <div class="group" onclick="this.classList.toggle('open')">
-    <div class="group-header">
-      <span class="group-title">{{ g.process }} / {{ g.model }} ({{ g.equipment_count }})</span>
-      <div class="group-badges">
-        {% if g.high_count %}<span class="badge badge-high">H:{{ g.high_count }}</span>{% endif %}
-        {% if g.medium_count %}<span class="badge badge-medium">M:{{ g.medium_count }}</span>{% endif %}
-        {% if g.low_count %}<span class="badge badge-low">L:{{ g.low_count }}</span>{% endif %}
+  <!-- Interpretation Guide -->
+  <div class="guide" onclick="this.classList.toggle('open')">
+    <div class="guide-header">
+      <span class="guide-title">How to Read This Report</span>
+      <span class="guide-toggle">click to expand</span>
+    </div>
+    <div class="guide-body">
+      <h3>Columns</h3>
+      <table class="guide-table">
+        <tr>
+          <th>Column</th><th>Meaning</th><th>Note</th>
+        </tr>
+        <tr>
+          <td><strong>Clicks</strong></td>
+          <td>Total click count in the analysis period</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>Sessions</strong></td>
+          <td>Number of sessions (separated by 15-min gap)</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>Days</strong></td>
+          <td>Number of distinct days with data</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>Concentration</strong></td>
+          <td>DBSCAN cluster membership ratio — how concentrated clicks are at specific coordinates</td>
+          <td>Reference only. Fixed-UI equipment typically shows &gt; 0.95 regardless of automation</td>
+        </tr>
+        <tr>
+          <td><strong>CV</strong></td>
+          <td>Coefficient of Variation of clicks per session — how uniform session lengths are</td>
+          <td>Primary verdict signal</td>
+        </tr>
+      </table>
+
+      <h3>Verdict (based on Session CV)</h3>
+      <table class="guide-table">
+        <tr><th>CV Range</th><th>Verdict</th><th>Meaning</th></tr>
+        <tr><td>&lt; 0.25</td><td class="verdict-high">high</td><td>Sessions have nearly identical click counts — automation pattern suspected. Prioritize for full analysis</td></tr>
+        <tr><td>0.25 ~ 0.60</td><td class="verdict-medium">medium</td><td>Moderate uniformity — review if resources allow</td></tr>
+        <tr><td>&gt; 0.60</td><td class="verdict-low">low</td><td>High variance between sessions — normal human operation</td></tr>
+        <tr><td>-</td><td class="verdict-medium">medium</td><td>Insufficient data (&lt; 2 valid sessions with 3+ clicks)</td></tr>
+      </table>
+
+      <h3>Limitations</h3>
+      <p>Triage uses session CV only. Click concentration is not used in verdict because fixed-UI equipment shows high concentration regardless of automation. Sequence similarity (pHash-based) is unavailable without image data.</p>
+      <p>Data source is the <strong>snapshotlist</strong> table (TTL 15 days). A triage <span class="verdict-high">high</span> is a candidate for full analysis, not a final determination.</p>
+
+      <h3>Recommended Workflow</h3>
+      <div class="guide-flow">
+        <span class="guide-flow-step">Triage (10,000+ equipment)</span>
+        <span class="guide-flow-arrow">&rarr;</span>
+        <span class="guide-flow-step">Filter high verdict</span>
+        <span class="guide-flow-arrow">&rarr;</span>
+        <span class="guide-flow-step">Full analysis (3-signal)</span>
       </div>
     </div>
-    <div class="group-body">
-      <table>
-        <tr><th>EqpID</th><th class="num">Clicks</th><th class="num">Sessions</th><th class="num">Days</th><th class="num">Concentration</th><th class="num">CV</th><th>Verdict</th></tr>
-        {% for r in g.results %}
-        <tr>
-          <td>{{ r.eqpid }}</td>
-          <td class="num">{{ r.total_clicks }}</td>
-          <td class="num">{{ r.session_count }}</td>
-          <td class="num">{{ r.data_days }}</td>
-          <td class="num">{% if r.click_concentration is not none %}{{ "%.2f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
-          <td class="num">{% if r.session_cv is not none %}{{ "%.2f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
-          <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
-            {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </table>
+  </div>
+
+  <!-- Process → Model → Equipment hierarchy -->
+  <h2 style="font-size:18px; margin-bottom:16px;">Process / Model Groups</h2>
+  {% for p in report.processes %}
+  <div class="process-group">
+    <div class="process-header" onclick="this.parentElement.classList.toggle('open')">
+      <span class="process-title">{{ p.process }} <span style="color:var(--text-muted); font-weight:400; font-size:13px;">({{ p.equipment_count }} equipment, {{ p.models|length }} models)</span></span>
+      <div class="group-badges">
+        {% if p.high_count %}<span class="badge badge-high">H:{{ p.high_count }}</span>{% endif %}
+        {% if p.medium_count %}<span class="badge badge-medium">M:{{ p.medium_count }}</span>{% endif %}
+        {% if p.low_count %}<span class="badge badge-low">L:{{ p.low_count }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="process-body">
+      {% for m in p.models %}
+      <div class="model-group">
+        <div class="model-header" onclick="event.stopPropagation(); this.parentElement.classList.toggle('open')">
+          <span class="model-title">{{ m.model }} <span style="font-weight:400;">({{ m.equipment_count }})</span></span>
+          <div class="group-badges">
+            {% if m.high_count %}<span class="badge badge-high">H:{{ m.high_count }}</span>{% endif %}
+            {% if m.medium_count %}<span class="badge badge-medium">M:{{ m.medium_count }}</span>{% endif %}
+            {% if m.low_count %}<span class="badge badge-low">L:{{ m.low_count }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="model-body">
+          <table>
+            <tr><th>EqpID</th><th class="num">Clicks</th><th class="num">Sessions</th><th class="num">Days</th><th class="num">Concentration</th><th class="num">CV</th><th>Verdict</th></tr>
+            {% for r in m.results %}
+            <tr>
+              <td>{{ r.eqpid }}</td>
+              <td class="num">{{ r.total_clicks }}</td>
+              <td class="num">{{ r.session_count }}</td>
+              <td class="num">{{ r.data_days }}</td>
+              <td class="num">{% if r.click_concentration is not none %}{{ "%.2f"|format(r.click_concentration) }}{% else %}-{% endif %}</td>
+              <td class="num">{% if r.session_cv is not none %}{{ "%.2f"|format(r.session_cv) }}{% else %}-{% endif %}</td>
+              <td class="{% if r.error %}verdict-error{% elif r.verdict == 'high' %}verdict-high{% elif r.verdict == 'medium' %}verdict-medium{% else %}verdict-low{% endif %}">
+                {% if r.error %}error{% else %}{{ r.verdict }}{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
   {% endfor %}

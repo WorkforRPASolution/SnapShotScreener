@@ -150,10 +150,17 @@ def verdict(
     cv_level: str,
     seq_level: str,
 ) -> str:
-    """FN-minimisation verdict (FR-14)."""
+    """FN-minimisation verdict (FR-14).
+
+    click_level (concentration) is excluded from the verdict because
+    fixed-UI equipment shows ~0.99 concentration regardless of
+    manual vs. automated operation, providing no discriminative power.
+
+    Verdict is determined by session CV and sequence similarity only.
+    """
     active = [
         lvl
-        for lvl in [click_level, cv_level, seq_level]
+        for lvl in [cv_level, seq_level]
         if lvl != "insufficient_data"
     ]
 

@@ -1,9 +1,12 @@
 """Tests for snapshot_screener.triage.screening."""
 from __future__ import annotations
 
-from snapshot_screener.analysis.screening import verdict
 from snapshot_screener.models import FrameFeature
-from snapshot_screener.triage.screening import compute_triage_screening
+from snapshot_screener.triage.screening import (
+    _triage_session_cv,
+    _triage_verdict,
+    compute_triage_screening,
+)
 
 
 def _make_features(n: int, cluster_ids=None, session_ids=None) -> list:
@@ -26,23 +29,49 @@ def _make_features(n: int, cluster_ids=None, session_ids=None) -> list:
     return features
 
 
+class TestTriageSessionCV:
+    """Test triage-specific session CV thresholds."""
+
+    def test_high_uniform_sessions(self):
+        """Sessions with nearly identical click counts → high."""
+        # 4 sessions, each with exactly 5 clicks → CV ≈ 0
+        sessions = ["S1"] * 5 + ["S2"] * 5 + ["S3"] * 5 + ["S4"] * 5
+        features = _make_features(20, session_ids=sessions)
+        cv_val, level = _triage_session_cv(features)
+        assert level == "high"
+        assert cv_val is not None and cv_val < 0.25
+
+    def test_low_variable_sessions(self):
+        """Sessions with very different click counts → low."""
+        # 3 sessions: 3, 10, 30 clicks → high CV
+        sessions = ["S1"] * 3 + ["S2"] * 10 + ["S3"] * 30
+        features = _make_features(43, session_ids=sessions)
+        cv_val, level = _triage_session_cv(features)
+        assert level == "low"
+        assert cv_val is not None and cv_val > 0.6
+
+    def test_insufficient_data(self):
+        """Single session → insufficient data."""
+        features = _make_features(10, session_ids=["S1"] * 10)
+        cv_val, level = _triage_session_cv(features)
+        assert level == "insufficient_data"
+        assert cv_val is None
+
+
 class TestTriageVerdict:
-    """Test 2-signal verdict (click concentration + session CV)."""
+    """Test session-CV-only verdict logic."""
 
-    def test_both_high_gives_high(self):
-        assert verdict("high", "high", "insufficient_data") == "high"
+    def test_high_cv_gives_high(self):
+        assert _triage_verdict("high") == "high"
 
-    def test_one_high_gives_medium(self):
-        assert verdict("high", "medium", "insufficient_data") == "medium"
+    def test_medium_cv_gives_medium(self):
+        assert _triage_verdict("medium") == "medium"
 
-    def test_both_low_gives_low(self):
-        assert verdict("low", "low", "insufficient_data") == "low"
+    def test_low_cv_gives_low(self):
+        assert _triage_verdict("low") == "low"
 
-    def test_mixed_gives_medium(self):
-        assert verdict("high", "low", "insufficient_data") == "medium"
-
-    def test_both_insufficient_gives_medium(self):
-        assert verdict("insufficient_data", "insufficient_data", "insufficient_data") == "medium"
+    def test_insufficient_gives_medium(self):
+        assert _triage_verdict("insufficient_data") == "medium"
 
 
 class TestComputeTriageScreening:
@@ -68,11 +97,25 @@ class TestComputeTriageScreening:
         )
         assert result.click_concentration_level == "insufficient_data"
 
-    def test_high_concentration(self):
-        # All 20 clicks in clusters → concentration = 1.0 → high
+    def test_high_concentration_reported_but_not_in_verdict(self):
+        """Concentration is reported but does not affect verdict."""
+        # All clicks clustered → concentration high, but single session → CV insufficient
         features = _make_features(20, cluster_ids=[0] * 20)
         result = compute_triage_screening(
             features, "EQ-T", "P", "M", data_days=3
         )
         assert result.click_concentration == 1.0
         assert result.click_concentration_level == "high"
+        # Verdict is medium (from insufficient CV), not high
+        assert result.verdict == "medium"
+
+    def test_verdict_follows_session_cv(self):
+        """Verdict follows session CV, not concentration."""
+        # 4 uniform sessions (CV ≈ 0) + all clustered
+        sessions = ["S1"] * 5 + ["S2"] * 5 + ["S3"] * 5 + ["S4"] * 5
+        features = _make_features(20, cluster_ids=[0] * 20, session_ids=sessions)
+        result = compute_triage_screening(
+            features, "EQ-T", "P", "M", data_days=3
+        )
+        assert result.verdict == "high"
+        assert result.session_cv_level == "high"

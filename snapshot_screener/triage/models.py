@@ -24,10 +24,9 @@ class TriageEquipmentResult:
 
 
 @dataclass
-class TriageGroupSummary:
-    """Aggregated summary for a (process, model) group."""
+class TriageModelSummary:
+    """Aggregated summary for a single model within a process."""
 
-    process: str
     model: str
     equipment_count: int = 0
     high_count: int = 0
@@ -35,6 +34,23 @@ class TriageGroupSummary:
     low_count: int = 0
     error_count: int = 0
     results: List[TriageEquipmentResult] = field(default_factory=list)
+
+
+@dataclass
+class TriageProcessSummary:
+    """Aggregated summary for a process (contains model groups)."""
+
+    process: str
+    equipment_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+    error_count: int = 0
+    models: List[TriageModelSummary] = field(default_factory=list)
+
+
+# Keep for backward compatibility (used in JSON groups output)
+TriageGroupSummary = TriageModelSummary
 
 
 @dataclass
@@ -50,5 +66,5 @@ class TriageReport:
     medium_count: int = 0
     low_count: int = 0
     error_count: int = 0
-    groups: List[TriageGroupSummary] = field(default_factory=list)
+    processes: List[TriageProcessSummary] = field(default_factory=list)
     all_results: List[TriageEquipmentResult] = field(default_factory=list)
