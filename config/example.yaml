@@ -57,4 +57,34 @@ invalidate_cache: false            # true: 기존 캐시 삭제 후 재계산
 verbose: false
 
 # ---- 출력 언어 ----
-lang: ko                           # ko (한국어) | en (English)                     # true: DEBUG 레벨 로깅
+lang: ko                           # ko (한국어) | en (English)
+
+
+# ========================================================================
+# 트리아지 모드 설정 예시
+# ========================================================================
+# 트리아지 모드: 이미지를 읽지 않고 snapshotlist 테이블의 fname 메타데이터만으로
+# 1만 대 이상의 장비를 경량 스크리닝한다. (10,000대 기준 20~45분 소요)
+#
+# 사용법 1: config 파일만으로 실행 (triage: true 설정)
+#   snapshot-screener --config config/triage_example.yaml
+#
+# 사용법 2: CLI 플래그로 실행
+#   snapshot-screener --triage --csv equipment.csv --config config/example.yaml
+#
+# 아래 설정을 별도 파일(예: triage_example.yaml)로 저장하거나,
+# 위 일반 모드 설정과 함께 두고 triage: true를 추가하면 된다.
+# 트리아지 모드에서 일반 모드 전용 설정(eqpid, phash_*, selector 등)은 무시된다.
+# ========================================================================
+
+# 위의 db_host, db_keyspace, date_from, date_to 등은 그대로 공유된다.
+# 아래 트리아지 전용 설정만 추가하면 된다.
+#
+# triage: true                        # 트리아지 모드 활성화 (--triage 플래그 대체)
+# csv: equipment.csv                  # 장비 CSV (열 순서: process, model, eqpid)
+#                                     # 절대 경로 또는 상대 경로 (config 파일 기준)
+# db_snapshotlist_table: snapshotlist # snapshotlist 테이블명 (기본: snapshotlist)
+# fname_delay_ms: 50                  # fname 쿼리 간격 (기본: 50ms, 일반 모드보다 빠름)
+# output_dir: ./triage_output         # 리포트 출력 (CSV + JSON + HTML)
+# circuit_breaker_threshold: 10       # 연속 N회 실패 시 헬스체크 → 중단 (기본: 10)
+# health_check_interval: 500          # N장비마다 커넥션 헬스체크 (기본: 500)
