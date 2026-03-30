@@ -163,6 +163,16 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
     consecutive_failures = 0
     start_time = time.monotonic()
 
+    # Adaptive progress interval based on total count
+    if total <= 10:
+        progress_interval = 1
+    elif total <= 100:
+        progress_interval = 10
+    elif total <= 1000:
+        progress_interval = 50
+    else:
+        progress_interval = 100
+
     # JSONL journal for incremental persistence
     output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -196,6 +206,17 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
                     consecutive_failures += 1
 
                 results.append(result)
+
+                # Per-equipment result log (verbose/DEBUG)
+                if not result.error:
+                    logger.debug(
+                        t("triage.log.equipment_done", lang).format(
+                            eqpid=result.eqpid,
+                            clicks=result.total_clicks,
+                            sessions=result.session_count,
+                            verdict=result.verdict,
+                        )
+                    )
 
                 # Write to journal immediately
                 journal_file.write(
@@ -231,8 +252,8 @@ def run_triage(config: "TriageConfig") -> Optional[TriageReport]:
                 ):
                     client.health_check()
 
-                # Progress reporting
-                if idx % 100 == 0 or idx == total:
+                # Progress reporting (adaptive interval)
+                if idx == 1 or idx % progress_interval == 0 or idx == total:
                     _log_progress(lang, idx, total, failed_count, start_time)
 
         except KeyboardInterrupt:
