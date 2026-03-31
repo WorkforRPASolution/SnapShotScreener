@@ -133,6 +133,7 @@ def _build_sessions_context(
     config: ScreenerConfig,
     frames_rel_dir: str = "",
     lang: str = "ko",
+    image_sizes: Dict[str, tuple] | None = None,
 ) -> List[Dict[str, Any]]:
     """Build session list context from representative features."""
     # Group by session_id
@@ -182,11 +183,14 @@ def _build_sessions_context(
 
             desc = ", ".join(desc_parts) if desc_parts else ""
 
-            # Compute click position percentage relative to screen dimensions
-            x_pct = (feat.x / config.screen_width) * 100 if config.screen_width else 0
-            y_pct = (
-                (feat.y / config.screen_height) * 100 if config.screen_height else 0
-            )
+            # Compute click position percentage relative to actual image dimensions
+            # (falls back to config screen dimensions if image size unknown)
+            if image_sizes and feat.fname in image_sizes:
+                img_w, img_h = image_sizes[feat.fname]
+            else:
+                img_w, img_h = config.screen_width, config.screen_height
+            x_pct = (feat.x / img_w) * 100 if img_w else 0
+            y_pct = (feat.y / img_h) * 100 if img_h else 0
 
             # Relative path to original image in frames/ directory
             original_path = ""
@@ -273,6 +277,7 @@ def render_report(
     result: AnalysisResult,
     images: Dict[str, str],
     config: ScreenerConfig,
+    image_sizes: Dict[str, tuple] | None = None,
 ) -> Path:
     """Render an HTML analysis report for a single equipment.
 
@@ -345,7 +350,8 @@ def render_report(
         "representative_count": result.representative_count,
         "reduction_rate": result.reduction_rate,
         "pattern_groups": _build_sessions_context(
-            result, images, config, frames_rel_dir, lang=config.lang,
+            result, images, config, frames_rel_dir,
+            lang=config.lang, image_sizes=image_sizes,
         ),
         "screening": _build_screening_context(result, lang=config.lang),
         "sensitivity": _build_sensitivity_context(result),

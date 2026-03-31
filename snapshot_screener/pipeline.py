@@ -183,7 +183,7 @@ def run_single_equipment(
     equip_dir.mkdir(parents=True, exist_ok=True)
 
     # 5a: HTML report (inside equipment directory)
-    report_path = render_report(result, collected.thumbnails, config)
+    report_path = render_report(result, collected.thumbnails, config, collected.image_sizes)
     logger.info(t("log.html_report", config.lang).format(path=report_path))
 
     # 5b: Save original images to frames/ directory

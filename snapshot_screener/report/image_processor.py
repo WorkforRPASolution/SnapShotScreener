@@ -19,7 +19,7 @@ def process_image_for_report(
     max_width: int = 640,
     max_height: int = 360,
     quality: int = 80,
-) -> str:
+) -> tuple[str, int, int]:
     """Decode a base64 image, resize, compress to JPEG, return base64 string.
 
     Parameters
@@ -35,11 +35,15 @@ def process_image_for_report(
 
     Returns
     -------
-    str
-        Base64-encoded JPEG string (no ``data:`` prefix -- template handles that).
+    tuple[str, int, int]
+        (base64 JPEG string, original_width, original_height).
+        The original dimensions are before resize, for coordinate mapping.
     """
     raw = base64.b64decode(image_b64)
     img = Image.open(io.BytesIO(raw))
+
+    # Capture original dimensions before resize
+    original_width, original_height = img.size
 
     # Resize maintaining aspect ratio
     img.thumbnail((max_width, max_height), Image.LANCZOS)
@@ -53,4 +57,4 @@ def process_image_for_report(
     img.save(buf, format="JPEG", quality=quality)
     buf.seek(0)
 
-    return base64.b64encode(buf.read()).decode("ascii")
+    return base64.b64encode(buf.read()).decode("ascii"), original_width, original_height

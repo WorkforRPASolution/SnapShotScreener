@@ -25,6 +25,7 @@ class CollectedImages:
 
     thumbnails: Dict[str, str]  # fname -> base64 JPEG (resized for HTML)
     originals: Dict[str, str]   # fname -> base64 PNG (original from Cassandra)
+    image_sizes: Dict[str, tuple]  # fname -> (original_width, original_height)
 
 
 def collect_report_images(
@@ -57,6 +58,7 @@ def collect_report_images(
     """
     thumbnails: Dict[str, str] = {}
     originals: Dict[str, str] = {}
+    image_sizes: Dict[str, tuple] = {}
 
     for feat in representative_features:
         if feat.fname in thumbnails:
@@ -77,8 +79,9 @@ def collect_report_images(
                 continue
 
             originals[feat.fname] = raw_b64
-            processed = process_image_for_report(raw_b64)
+            processed, orig_w, orig_h = process_image_for_report(raw_b64)
             thumbnails[feat.fname] = processed
+            image_sizes[feat.fname] = (orig_w, orig_h)
         except Exception:
             logger.warning(
                 "Failed to process image %s/%s — skipping",
@@ -93,4 +96,4 @@ def collect_report_images(
         len(representative_features),
         eqpid,
     )
-    return CollectedImages(thumbnails=thumbnails, originals=originals)
+    return CollectedImages(thumbnails=thumbnails, originals=originals, image_sizes=image_sizes)

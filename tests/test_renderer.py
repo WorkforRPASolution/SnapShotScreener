@@ -152,7 +152,7 @@ class TestImageProcessor:
     def test_resize_and_compress(self) -> None:
         """Image is resized and output is valid base64 JPEG."""
         original_b64 = _make_test_image_b64(1920, 1080)
-        result = process_image_for_report(original_b64, max_width=640, max_height=360)
+        result, orig_w, orig_h = process_image_for_report(original_b64, max_width=640, max_height=360)
 
         # Result should be valid base64
         raw = base64.b64decode(result)
@@ -160,25 +160,31 @@ class TestImageProcessor:
         assert img.format == "JPEG"
         assert img.size[0] <= 640
         assert img.size[1] <= 360
+        assert orig_w == 1920
+        assert orig_h == 1080
 
     def test_maintains_aspect_ratio(self) -> None:
         """Thumbnail should maintain the aspect ratio."""
         # 16:9 input
         original_b64 = _make_test_image_b64(1600, 900)
-        result = process_image_for_report(original_b64, max_width=640, max_height=360)
+        result, orig_w, orig_h = process_image_for_report(original_b64, max_width=640, max_height=360)
 
         raw = base64.b64decode(result)
         img = Image.open(io.BytesIO(raw))
         assert img.size == (640, 360)
+        assert orig_w == 1600
+        assert orig_h == 900
 
     def test_small_image_not_upscaled(self) -> None:
         """Images smaller than max dimensions should not be upscaled."""
         original_b64 = _make_test_image_b64(320, 200)
-        result = process_image_for_report(original_b64, max_width=640, max_height=360)
+        result, orig_w, orig_h = process_image_for_report(original_b64, max_width=640, max_height=360)
 
         raw = base64.b64decode(result)
         img = Image.open(io.BytesIO(raw))
         assert img.size == (320, 200)
+        assert orig_w == 320
+        assert orig_h == 200
 
     def test_rgba_image_converted(self) -> None:
         """RGBA images should be converted to RGB for JPEG."""
@@ -188,7 +194,7 @@ class TestImageProcessor:
         buf.seek(0)
         original_b64 = base64.b64encode(buf.read()).decode("ascii")
 
-        result = process_image_for_report(original_b64)
+        result, _, _ = process_image_for_report(original_b64)
         raw = base64.b64decode(result)
         out_img = Image.open(io.BytesIO(raw))
         assert out_img.mode == "RGB"
@@ -210,8 +216,9 @@ class TestRenderer:
 
         # Create a simple image for one frame
         img_b64 = _make_test_image_b64(320, 200)
+        b64_str, _, _ = process_image_for_report(img_b64)
         images: Dict[str, str] = {
-            "1742698872000_285_124.png": process_image_for_report(img_b64),
+            "1742698872000_285_124.png": b64_str,
         }
 
         output_path = render_report(result, images, config)
@@ -253,13 +260,38 @@ class TestRenderer:
         config = _make_config(output_dir=str(tmp_path))
         result = _make_analysis_result()
         img_b64 = _make_test_image_b64(320, 200)
-        images = {"1742698872000_285_124.png": process_image_for_report(img_b64)}
+        b64_str, orig_w, orig_h = process_image_for_report(img_b64)
+        fname = "1742698872000_285_124.png"
+        images = {fname: b64_str}
+        image_sizes = {fname: (orig_w, orig_h)}
 
-        output_path = render_report(result, images, config)
+        output_path = render_report(result, images, config, image_sizes)
         html = output_path.read_text(encoding="utf-8")
 
         # Check that click-dot is rendered via CSS, not canvas
         assert "click-dot" in html
+
+    def test_click_dot_uses_actual_image_dimensions(self, tmp_path: Path) -> None:
+        """Click dot percentage should be based on actual image size, not config."""
+        config = _make_config(output_dir=str(tmp_path))
+        # config has screen_width=1920, screen_height=1080
+        result = _make_analysis_result()
+        # Image is 1024x768 (4:3), different from config 1920x1080 (16:9)
+        img_b64 = _make_test_image_b64(1024, 768)
+        b64_str, orig_w, orig_h = process_image_for_report(img_b64)
+        assert (orig_w, orig_h) == (1024, 768)
+        fname = "1742698872000_285_124.png"
+        images = {fname: b64_str}
+        image_sizes = {fname: (orig_w, orig_h)}
+
+        output_path = render_report(result, images, config, image_sizes)
+        html = output_path.read_text(encoding="utf-8")
+
+        # feat.x=285, feat.y=124 (from fname)
+        # With image_sizes: x=285/1024*100=27.83%, y=124/768*100=16.15%
+        # Without image_sizes (old): x=285/1920*100=14.84%, y=124/1080*100=11.48%
+        assert "left:27.83%" in html
+        assert "top:16.15%" in html
         assert 'class="click-dot"' in html
         # Should not have canvas (JavaScript is OK for zoom modal)
         assert "<canvas" not in html
@@ -327,16 +359,15 @@ class TestRenderer:
         assert "fonts.googleapis.com" not in html
         assert "Consolas" in html
 
-    def test_mobile_aspect_ratio(self, tmp_path: Path) -> None:
-        """Mobile media query should use 16/9 aspect ratio."""
+    def test_mobile_no_forced_aspect_ratio(self, tmp_path: Path) -> None:
+        """Mobile media query should NOT force a fixed aspect ratio."""
         config = _make_config(output_dir=str(tmp_path))
         result = _make_analysis_result()
 
         output_path = render_report(result, {}, config)
         html = output_path.read_text(encoding="utf-8")
 
-        assert "aspect-ratio: 16/9" in html
-        assert "aspect-ratio: 16/10" not in html
+        assert "aspect-ratio: 16/9" not in html
 
 
 # ---------------------------------------------------------------------------
@@ -435,3 +466,75 @@ class TestSummaryRenderer:
         html = output_path.read_text(encoding="utf-8")
 
         assert "data:image" not in html
+
+
+# ---------------------------------------------------------------------------
+# E2E: Click dot coordinate accuracy across resolutions
+# ---------------------------------------------------------------------------
+
+
+class TestClickDotE2E:
+    """End-to-end test: image creation → processing → rendering → HTML coordinate check."""
+
+    @pytest.mark.parametrize(
+        "img_w, img_h, click_x, click_y, expected_x_pct, expected_y_pct",
+        [
+            # 16:9 (matches config default)
+            (1920, 1080, 960, 540, "50.0", "50.0"),
+            # 4:3 (different from config 1920x1080)
+            (1024, 768, 512, 384, "50.0", "50.0"),
+            # Wide (21:9)
+            (2560, 1080, 1280, 540, "50.0", "50.0"),
+            # Corner case: top-left
+            (1920, 1080, 0, 0, "0.0", "0.0"),
+            # Near bottom-right
+            (1920, 1080, 1900, 1060, "98.96", "98.15"),
+        ],
+        ids=["16:9-center", "4:3-center", "21:9-center", "top-left", "near-bottom-right"],
+    )
+    def test_click_dot_position_accuracy(
+        self, tmp_path, img_w, img_h, click_x, click_y, expected_x_pct, expected_y_pct,
+    ):
+        """Click dot must land at the correct percentage for various resolutions."""
+        config = _make_config(output_dir=str(tmp_path))
+        fname = f"1742698872000_{click_x}_{click_y}.png"
+
+        # Build features with the click coordinates
+        feat = _make_frame_feature(fname=fname, x=click_x, y=click_y)
+        result = _make_analysis_result(
+            representative_features=[feat],
+            all_features=[feat],
+        )
+
+        # Create image at the specified resolution
+        img_b64 = _make_test_image_b64(img_w, img_h)
+        b64_str, orig_w, orig_h = process_image_for_report(img_b64)
+        assert (orig_w, orig_h) == (img_w, img_h)
+
+        images = {fname: b64_str}
+        image_sizes = {fname: (orig_w, orig_h)}
+
+        output_path = render_report(result, images, config, image_sizes)
+        html = output_path.read_text(encoding="utf-8")
+
+        assert f"left:{expected_x_pct}%" in html
+        assert f"top:{expected_y_pct}%" in html
+
+    def test_fallback_to_config_when_no_image_sizes(self, tmp_path):
+        """Without image_sizes, coordinates should fall back to config dimensions."""
+        config = _make_config(output_dir=str(tmp_path))
+        result = _make_analysis_result()
+
+        # Provide image so click-dot is rendered, but no image_sizes
+        fname = "1742698872000_285_124.png"
+        img_b64 = _make_test_image_b64(1920, 1080)
+        b64_str, _, _ = process_image_for_report(img_b64)
+        images = {fname: b64_str}
+
+        output_path = render_report(result, images, config)  # no image_sizes
+        html = output_path.read_text(encoding="utf-8")
+
+        # feat.x=285, feat.y=124 fallback to config 1920x1080
+        # 285/1920*100 = 14.84, 124/1080*100 = 11.48
+        assert "left:14.84%" in html
+        assert "top:11.48%" in html
