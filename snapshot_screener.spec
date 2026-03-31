@@ -36,6 +36,7 @@ a = Analysis(
         'notebook',
         'sphinx',
         'pyarrow',
+        'numexpr',
     ],
     noarchive=False,
 )
