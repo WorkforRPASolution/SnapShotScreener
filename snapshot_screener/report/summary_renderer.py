@@ -4,6 +4,7 @@ Produces a single HTML page comparing multiple equipment analysis results.
 """
 from __future__ import annotations
 
+import csv
 import datetime
 import logging
 from pathlib import Path
@@ -70,7 +71,8 @@ def render_summary(
         # Build report link (relative)
         date_from_str = str(config.date_from).replace("-", "")
         date_to_str = str(config.date_to).replace("-", "")
-        report_link = f"{r.screening.verdict}_SnapshotScreener_{r.eqpid}_{date_from_str}-{date_to_str}/report.html"
+        dir_name = f"{r.screening.verdict}_SnapshotScreener_{r.eqpid}_{date_from_str}-{date_to_str}"
+        report_link = f"{dir_name}/{dir_name}.html"
 
         comparison_rows.append(
             {
@@ -115,4 +117,46 @@ def render_summary(
 
     output_path.write_text(html, encoding="utf-8")
     logger.info("Summary report written to %s", output_path)
+
+    # Write CSV summary
+    csv_path = output_dir / f"SnapshotScreener_Summary_{date_from_str}-{date_to_str}.csv"
+    _write_summary_csv(csv_path, results, config)
+
     return output_path
+
+
+def _write_summary_csv(
+    path: Path,
+    results: List[AnalysisResult],
+    config: ScreenerConfig,
+) -> None:
+    """Write flat CSV summary of all equipment results."""
+    fieldnames = [
+        "eqpid", "analysis_days", "total_clicks", "sessions",
+        "click_concentration", "session_cv", "sequence_similarity", "verdict",
+    ]
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in results:
+            s = r.screening
+            writer.writerow({
+                "eqpid": r.eqpid,
+                "analysis_days": r.analysis_days,
+                "total_clicks": r.total_clicks,
+                "sessions": r.session_count,
+                "click_concentration": (
+                    f"{s.click_concentration:.4f}"
+                    if s.click_concentration is not None else ""
+                ),
+                "session_cv": (
+                    f"{s.session_cv:.4f}"
+                    if s.session_cv is not None else ""
+                ),
+                "sequence_similarity": (
+                    f"{s.sequence_similarity:.4f}"
+                    if s.sequence_similarity is not None else ""
+                ),
+                "verdict": s.verdict,
+            })
+    logger.info("Summary CSV written to %s", path)

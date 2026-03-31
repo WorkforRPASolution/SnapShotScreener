@@ -201,7 +201,7 @@ def run_single_equipment(
     logger.info(t("log.original_images", config.lang).format(path=frames_dir, count=saved_count))
 
     # 5c: JSON export (inside equipment directory)
-    json_path = equip_dir / "report.json"
+    json_path = equip_dir / f"{base_name}.json"
     json_data = _build_json_export(result, config)
     json_path.write_text(json.dumps(json_data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(t("log.json_export", config.lang).format(path=json_path))

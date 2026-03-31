@@ -361,7 +361,7 @@ def render_report(
     # Write output inside equipment directory
     equip_dir = Path(config.output_dir) / base_name
     equip_dir.mkdir(parents=True, exist_ok=True)
-    output_path = equip_dir / "report.html"
+    output_path = equip_dir / f"{base_name}.html"
 
     output_path.write_text(html, encoding="utf-8")
     logger.info("Report written to %s", output_path)
