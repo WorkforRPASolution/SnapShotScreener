@@ -43,7 +43,15 @@ def load_equipment_csv(csv_path: str, *, lang: str = "ko") -> List[EquipmentInfo
     results: List[EquipmentInfo] = []
     seen: Dict[str, int] = {}
 
-    with open(csv_path, encoding="utf-8-sig", newline="") as f:
+    # Try UTF-8 first, fall back to CP949 (common for Excel-exported CSV on Korean Windows)
+    encoding = "utf-8-sig"
+    try:
+        with open(csv_path, encoding=encoding, newline="") as f:
+            f.read()
+    except UnicodeDecodeError:
+        encoding = "cp949"
+
+    with open(csv_path, encoding=encoding, newline="") as f:
         reader = csv.reader(f)
 
         # Skip header row
