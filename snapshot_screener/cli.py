@@ -560,7 +560,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             logger.error(t("error.cassandra_failed", lang).format(e=e))
             return 3
         except Exception as e:
-            logger.error(t("error.analysis_error", lang).format(e=e))
+            logger.error(t("error.analysis_error", lang).format(e=e), exc_info=True)
             return 2
 
     # ---- Normal mode ----
@@ -586,5 +586,5 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error(t("error.config_error", lang).format(e=e))
         return 1
     except Exception as e:
-        logger.error(t("error.analysis_error", lang).format(e=e))
+        logger.error(t("error.analysis_error", lang).format(e=e), exc_info=True)
         return 2
