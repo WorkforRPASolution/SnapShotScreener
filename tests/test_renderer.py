@@ -270,7 +270,9 @@ class TestRenderer:
         result = _make_analysis_result()
 
         output_path = render_report(result, {}, config)
-        assert output_path.name == "SnapshotScreener_EQ-TEST_20260301-20260315.html"
+        verdict = result.screening.verdict
+        assert output_path.name == "report.html"
+        assert output_path.parent.name == f"{verdict}_SnapshotScreener_EQ-TEST_20260301-20260315"
 
     def test_empty_frames_message(self, tmp_path: Path) -> None:
         """Zero representative frames shows placeholder message."""
@@ -395,8 +397,8 @@ class TestSummaryRenderer:
         assert "1,234" in html
 
         # Links to individual reports
-        assert "SnapshotScreener_EQ-TEST_20260301-20260315.html" in html
-        assert "SnapshotScreener_EQ-TEST2_20260301-20260315.html" in html
+        assert "_SnapshotScreener_EQ-TEST_20260301-20260315/report.html" in html
+        assert "_SnapshotScreener_EQ-TEST2_20260301-20260315/report.html" in html
 
     def test_summary_output_filename(self, tmp_path: Path) -> None:
         """Summary filename follows expected pattern."""

@@ -177,29 +177,31 @@ def run_single_equipment(
     output_dir = Path(config.output_dir)
     date_from_str = str(config.date_from).replace("-", "")
     date_to_str = str(config.date_to).replace("-", "")
-    base_name = f"SnapshotScreener_{eqpid}_{date_from_str}-{date_to_str}"
+    verdict = result.screening.verdict
+    base_name = f"{verdict}_SnapshotScreener_{eqpid}_{date_from_str}-{date_to_str}"
+    equip_dir = output_dir / base_name
+    equip_dir.mkdir(parents=True, exist_ok=True)
 
-    # 5a: HTML report (thumbnails)
+    # 5a: HTML report (inside equipment directory)
     report_path = render_report(result, collected.thumbnails, config)
     logger.info(t("log.html_report", config.lang).format(path=report_path))
 
     # 5b: Save original images to frames/ directory
-    frames_dir = output_dir / base_name / "frames"
+    frames_dir = equip_dir / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
     saved_count = 0
     for feat in representative_features:
         raw_b64 = collected.originals.get(feat.fname)
         if raw_b64 is None:
             continue
-        # Save as original PNG
         img_bytes = base64.b64decode(raw_b64)
         img_path = frames_dir / feat.fname
         img_path.write_bytes(img_bytes)
         saved_count += 1
     logger.info(t("log.original_images", config.lang).format(path=frames_dir, count=saved_count))
 
-    # 5c: JSON export (machine-readable analysis result)
-    json_path = output_dir / f"{base_name}.json"
+    # 5c: JSON export (inside equipment directory)
+    json_path = equip_dir / "report.json"
     json_data = _build_json_export(result, config)
     json_path.write_text(json.dumps(json_data, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info(t("log.json_export", config.lang).format(path=json_path))

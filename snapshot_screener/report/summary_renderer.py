@@ -70,7 +70,7 @@ def render_summary(
         # Build report link (relative)
         date_from_str = str(config.date_from).replace("-", "")
         date_to_str = str(config.date_to).replace("-", "")
-        report_link = f"SnapshotScreener_{r.eqpid}_{date_from_str}-{date_to_str}.html"
+        report_link = f"{r.screening.verdict}_SnapshotScreener_{r.eqpid}_{date_from_str}-{date_to_str}/report.html"
 
         comparison_rows.append(
             {

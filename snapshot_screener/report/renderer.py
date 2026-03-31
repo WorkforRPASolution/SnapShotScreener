@@ -326,11 +326,11 @@ def render_report(
         )
     verdict_desc = ", ".join(parts) + "." if parts else ""
 
-    # Relative path from HTML to frames/ directory
+    # Equipment directory and relative path from HTML to frames/
     date_from_str = str(config.date_from).replace("-", "")
     date_to_str = str(config.date_to).replace("-", "")
-    base_name = f"SnapshotScreener_{result.eqpid}_{date_from_str}-{date_to_str}"
-    frames_rel_dir = f"{base_name}/frames"
+    base_name = f"{result.screening.verdict}_SnapshotScreener_{result.eqpid}_{date_from_str}-{date_to_str}"
+    frames_rel_dir = "frames"
 
     context = {
         "eqpid": result.eqpid,
@@ -358,11 +358,10 @@ def render_report(
 
     html = template.render(**context)
 
-    # Write output
-    output_dir = Path(config.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{base_name}.html"
-    output_path = output_dir / filename
+    # Write output inside equipment directory
+    equip_dir = Path(config.output_dir) / base_name
+    equip_dir.mkdir(parents=True, exist_ok=True)
+    output_path = equip_dir / "report.html"
 
     output_path.write_text(html, encoding="utf-8")
     logger.info("Report written to %s", output_path)
