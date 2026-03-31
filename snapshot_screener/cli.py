@@ -362,6 +362,17 @@ def build_config(args: argparse.Namespace, parser: argparse.ArgumentParser = Non
 
     lang = cfg.get("lang", "ko")
 
+    # Resolve eqpid_list path (same rules as triage CSV):
+    #   absolute → as-is, relative + config → config dir, relative → CWD
+    if eqpid_list and not Path(eqpid_list).is_absolute():
+        if args.config:
+            config_dir = Path(args.config).resolve().parent
+            resolved = config_dir / eqpid_list
+            if resolved.exists():
+                eqpid_list = str(resolved)
+        else:
+            eqpid_list = str(Path(eqpid_list).resolve())
+
     if eqpids_raw and isinstance(eqpids_raw, list):
         eqpids = eqpids_raw
     elif eqpid:
