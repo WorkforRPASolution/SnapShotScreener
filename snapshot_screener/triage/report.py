@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader
+from jinja2 import Environment, FileSystemLoader
 
 from snapshot_screener.i18n import get_labels, t
 from snapshot_screener.triage.models import (
@@ -201,20 +201,12 @@ def _write_html(
     report: TriageReport, path: Path, config: "TriageConfig"
 ) -> None:
     """Write self-contained HTML report."""
-    try:
-        env = Environment(
-            loader=PackageLoader(
-                "snapshot_screener", "report/templates"
-            ),
-            autoescape=True,
-        )
-    except Exception:
-        env = Environment(
-            loader=FileSystemLoader(
-                str(Path(__file__).resolve().parent.parent / "report" / "templates")
-            ),
-            autoescape=True,
-        )
+    from snapshot_screener.report.renderer import _get_template_dir
+
+    env = Environment(
+        loader=FileSystemLoader(str(_get_template_dir()), encoding="utf-8"),
+        autoescape=True,
+    )
 
     labels = get_labels(config.lang)
     template = env.get_template("triage.html.j2")

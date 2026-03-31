@@ -292,7 +292,7 @@ def render_report(
     """
     template_dir = _get_template_dir()
     env = Environment(
-        loader=FileSystemLoader(str(template_dir)),
+        loader=FileSystemLoader(str(template_dir), encoding="utf-8"),
         autoescape=False,
     )
     template = env.get_template("report.html.j2")
