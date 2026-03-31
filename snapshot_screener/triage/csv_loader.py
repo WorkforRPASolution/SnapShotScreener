@@ -26,6 +26,29 @@ class EquipmentInfo:
     model: str
 
 
+def _detect_csv_encoding(csv_path: str) -> str:
+    """Detect CSV file encoding by BOM and trial decoding."""
+    with open(csv_path, "rb") as f:
+        raw = f.read(4)
+
+    # BOM detection
+    if raw[:3] == b"\xef\xbb\xbf":
+        return "utf-8-sig"
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return "utf-16"
+
+    # Try UTF-8 full decode
+    try:
+        with open(csv_path, encoding="utf-8", newline="") as f:
+            f.read()
+        return "utf-8"
+    except UnicodeDecodeError:
+        pass
+
+    # Korean Windows default
+    return "cp949"
+
+
 def load_equipment_csv(csv_path: str, *, lang: str = "ko") -> List[EquipmentInfo]:
     """Parse the equipment hierarchy CSV and return a list of entries.
 
@@ -43,13 +66,7 @@ def load_equipment_csv(csv_path: str, *, lang: str = "ko") -> List[EquipmentInfo
     results: List[EquipmentInfo] = []
     seen: Dict[str, int] = {}
 
-    # Try UTF-8 first, fall back to CP949 (common for Excel-exported CSV on Korean Windows)
-    encoding = "utf-8-sig"
-    try:
-        with open(csv_path, encoding=encoding, newline="") as f:
-            f.read()
-    except UnicodeDecodeError:
-        encoding = "cp949"
+    encoding = _detect_csv_encoding(csv_path)
 
     with open(csv_path, encoding=encoding, newline="") as f:
         reader = csv.reader(f)

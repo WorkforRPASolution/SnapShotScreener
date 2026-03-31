@@ -35,6 +35,7 @@ a = Analysis(
         'IPython',
         'notebook',
         'sphinx',
+        'pyarrow',
     ],
     noarchive=False,
 )
