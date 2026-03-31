@@ -42,8 +42,10 @@ session_gap_ms: 900000             # 세션 분리 gap (15분, 900,000ms)
 phash_similar_threshold: 4         # 같은 화면 판정 pHash 거리 임계값
 phash_transition_threshold: 8      # 화면 전환 판정 pHash 거리 임계값
 delta_spike_ms: 30000              # 시간 간격 스파이크 임계값 (30초)
-dbscan_eps: 0.03                   # DBSCAN epsilon (정규화 좌표 기준, 0.03 = 화면의 3%)
+dbscan_eps: 0.04                   # DBSCAN epsilon (정규화 좌표 기준, 0.04 = 화면의 4%)
 dbscan_min_samples: 2              # DBSCAN 최소 샘플 수
+cv_high_threshold: 0.3             # 세션 CV가 이 값 미만이면 "높음" 판정
+cv_low_threshold: 0.85             # 세션 CV가 이 값 초과이면 "낮음" 판정
 screen_width: 1920                 # 화면 해상도 (좌표 정규화용)
 screen_height: 1080
 selector: simple                   # simple (파일럿) | scored (Phase 2용)

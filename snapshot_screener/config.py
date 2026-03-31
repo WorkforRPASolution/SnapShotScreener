@@ -34,8 +34,10 @@ class ScreenerConfig:
     phash_similar_threshold: int = 4
     phash_transition_threshold: int = 8
     delta_spike_ms: int = 30_000
-    dbscan_eps: float = 0.03
+    dbscan_eps: float = 0.04
     dbscan_min_samples: int = 2
+    cv_high_threshold: float = 0.3
+    cv_low_threshold: float = 0.85
     screen_width: int = 1920
     screen_height: int = 1080
     selector: str = "simple"
@@ -123,8 +125,10 @@ class TriageConfig:
 
     # Analysis
     session_gap_ms: int = 900_000
-    dbscan_eps: float = 0.03
+    dbscan_eps: float = 0.04
     dbscan_min_samples: int = 2
+    cv_high_threshold: float = 0.3
+    cv_low_threshold: float = 0.85
     screen_width: int = 1920
     screen_height: int = 1080
     fname_pattern: str = "auto"

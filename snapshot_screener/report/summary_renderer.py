@@ -57,8 +57,11 @@ def render_summary(
     low_count = 0
     high_eqpids: List[str] = []
 
+    _VERDICT_ORDER = {"high": 0, "medium": 1, "low": 2}
+    sorted_results = sorted(results, key=lambda r: _VERDICT_ORDER.get(r.screening.verdict, 1))
+
     comparison_rows: List[Dict[str, Any]] = []
-    for r in results:
+    for r in sorted_results:
         verdict_class = _verdict_to_class(r.screening.verdict)
         if verdict_class == "high":
             high_count += 1
@@ -120,7 +123,7 @@ def render_summary(
 
     # Write CSV summary
     csv_path = output_dir / f"SnapshotScreener_Summary_{date_from_str}-{date_to_str}.csv"
-    _write_summary_csv(csv_path, results, config)
+    _write_summary_csv(csv_path, sorted_results, config)
 
     return output_path
 

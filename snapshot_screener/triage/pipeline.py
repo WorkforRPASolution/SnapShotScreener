@@ -118,6 +118,8 @@ def _analyze_single_equipment(
     return compute_triage_screening(
         features, eq.eqpid, eq.process, eq.model, data_days,
         skip_clustering=skip_clustering,
+        cv_high=config.cv_high_threshold,
+        cv_low=config.cv_low_threshold,
     )
 
 

@@ -4,10 +4,8 @@ Click concentration is reported but excluded from verdict because
 fixed-UI equipment shows ~0.99 concentration regardless of
 manual vs. automated operation (no discriminative power).
 
-Session CV alone determines the verdict:
-  CV < 0.25  → high  (near-deterministic session lengths)
-  CV 0.25~0.6 → medium
-  CV > 0.6   → low   (normal human variance)
+Session CV alone determines the verdict. Thresholds are configurable
+via cv_high_threshold / cv_low_threshold in TriageConfig (default 0.3 / 1.0).
 """
 from __future__ import annotations
 
@@ -18,12 +16,12 @@ from snapshot_screener.models import FrameFeature
 from snapshot_screener.triage.models import TriageEquipmentResult
 
 
-def _triage_session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
-    """Session CV with triage-specific thresholds.
-
-    Tighter thresholds than the full pipeline to separate automation
-    from manual operation on fixed-UI equipment.
-    """
+def _triage_session_cv(
+    features: List[FrameFeature],
+    cv_high: float = 0.3,
+    cv_low: float = 1.0,
+) -> tuple[float | None, str]:
+    """Session CV with configurable thresholds."""
     import statistics
     from collections import defaultdict
 
@@ -40,9 +38,9 @@ def _triage_session_cv(features: List[FrameFeature]) -> tuple[float | None, str]
     std_val = statistics.stdev(valid_counts)
     cv = std_val / mean_val
 
-    if cv < 0.25:
+    if cv < cv_high:
         level = "high"
-    elif cv <= 0.6:
+    elif cv <= cv_low:
         level = "medium"
     else:
         level = "low"
@@ -67,6 +65,8 @@ def compute_triage_screening(
     data_days: int,
     *,
     skip_clustering: bool = False,
+    cv_high: float = 0.3,
+    cv_low: float = 1.0,
 ) -> TriageEquipmentResult:
     """Compute triage screening.
 
@@ -82,6 +82,8 @@ def compute_triage_screening(
     skip_clustering:
         If True, skip click_concentration (set to None).
         Used when click count is too large for DBSCAN.
+    cv_high, cv_low:
+        Session CV thresholds for verdict level.
     """
     total = len(features)
 
@@ -91,8 +93,8 @@ def compute_triage_screening(
     else:
         cc_val, cc_level = click_concentration(features, total)
 
-    # Session CV — primary verdict signal (triage thresholds)
-    cv_val, cv_level = _triage_session_cv(features)
+    # Session CV — primary verdict signal
+    cv_val, cv_level = _triage_session_cv(features, cv_high, cv_low)
 
     vrd = _triage_verdict(cv_level)
 

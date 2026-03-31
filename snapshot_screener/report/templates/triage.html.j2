@@ -208,9 +208,9 @@
       <h3>{{ L.triage_report_verdict_title }}</h3>
       <table class="guide-table">
         <tr><th>{{ L.triage_report_cv_range }}</th><th>{{ L.triage_report_verdict }}</th><th>{{ L.triage_report_meaning }}</th></tr>
-        <tr><td>&lt; 0.25</td><td class="verdict-high">{{ L.triage_report_high }}</td><td>{{ L.triage_report_verdict_high_desc }}</td></tr>
-        <tr><td>0.25 ~ 0.60</td><td class="verdict-medium">{{ L.triage_report_medium }}</td><td>{{ L.triage_report_verdict_medium_desc }}</td></tr>
-        <tr><td>&gt; 0.60</td><td class="verdict-low">{{ L.triage_report_low }}</td><td>{{ L.triage_report_verdict_low_desc }}</td></tr>
+        <tr><td>&lt; {{ config.cv_high_threshold }}</td><td class="verdict-high">{{ L.triage_report_high }}</td><td>{{ L.triage_report_verdict_high_desc }}</td></tr>
+        <tr><td>{{ config.cv_high_threshold }} ~ {{ config.cv_low_threshold }}</td><td class="verdict-medium">{{ L.triage_report_medium }}</td><td>{{ L.triage_report_verdict_medium_desc }}</td></tr>
+        <tr><td>&gt; {{ config.cv_low_threshold }}</td><td class="verdict-low">{{ L.triage_report_low }}</td><td>{{ L.triage_report_verdict_low_desc }}</td></tr>
         <tr><td>-</td><td class="verdict-medium">{{ L.triage_report_medium }}</td><td>{{ L.triage_report_verdict_insufficient_desc }}</td></tr>
       </table>
 

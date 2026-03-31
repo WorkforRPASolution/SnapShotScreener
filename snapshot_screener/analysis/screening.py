@@ -26,13 +26,21 @@ def _lcs_length(a: list, b: list) -> int:
     return dp[n]
 
 
-def compute_screening(features: List[FrameFeature]) -> ScreeningResult:
+def compute_screening(
+    features: List[FrameFeature],
+    cv_high: float = 0.3,
+    cv_low: float = 1.0,
+) -> ScreeningResult:
     """Compute screening metrics and verdict from *features*.
 
     Parameters
     ----------
     features:
         FrameFeature list with ``_phase_completed >= 5``.
+    cv_high:
+        Session CV threshold below which level is "high".
+    cv_low:
+        Session CV threshold above which level is "low".
 
     Returns
     -------
@@ -48,7 +56,7 @@ def compute_screening(features: List[FrameFeature]) -> ScreeningResult:
     cc_val, cc_level = click_concentration(features, total)
 
     # --- FR-12: Session CV ---
-    cv_val, cv_level = session_cv(features)
+    cv_val, cv_level = session_cv(features, cv_high, cv_low)
 
     # --- FR-13: LCS Similarity ---
     seq_val, seq_level = sequence_similarity(features)
@@ -83,7 +91,11 @@ def click_concentration(
     return concentration, level
 
 
-def session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
+def session_cv(
+    features: List[FrameFeature],
+    cv_high: float = 0.3,
+    cv_low: float = 1.0,
+) -> tuple[float | None, str]:
     session_counts: dict[str, int] = defaultdict(int)
     for f in features:
         session_counts[f.session_id] += 1
@@ -98,9 +110,9 @@ def session_cv(features: List[FrameFeature]) -> tuple[float | None, str]:
     std_val = statistics.stdev(valid_counts)  # ddof=1 by default
     cv = std_val / mean_val
 
-    if cv < 0.3:
+    if cv < cv_high:
         level = "high"
-    elif cv <= 1.0:
+    elif cv <= cv_low:
         level = "medium"
     else:
         level = "low"
@@ -138,7 +150,7 @@ def sequence_similarity(features: List[FrameFeature]) -> tuple[float | None, str
 
     if mean_sim > 0.7:
         level = "high"
-    elif mean_sim >= 0.5:
+    elif mean_sim >= 0.4:
         level = "medium"
     else:
         level = "low"

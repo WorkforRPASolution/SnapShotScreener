@@ -33,10 +33,10 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "signal.click_concentration.medium": "중간 수준 (40% ~ 70%)",
         "signal.click_concentration.low": "패턴 가능성 낮음 (< 40%)",
         "signal.session_cv.high": "세션 구조 일정 (< 0.3)",
-        "signal.session_cv.medium": "중간 수준 (0.3 ~ 1.0)",
-        "signal.session_cv.low": "세션 구조 불규칙 (> 1.0)",
+        "signal.session_cv.medium": "중간 수준 (0.3 ~ 0.85)",
+        "signal.session_cv.low": "세션 구조 불규칙 (> 0.85)",
         "signal.sequence_similarity.high": "높은 유사도 (> 0.7)",
-        "signal.sequence_similarity.medium": "중간 수준 (0.5 ~ 0.7)",
+        "signal.sequence_similarity.medium": "중간 수준 (0.4 ~ 0.7)",
         "signal.sequence_similarity.low": "낮은 유사도 (< 0.5)",
 
         # ---- Verdict description parts (renderer) ----
@@ -227,10 +227,10 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "signal.click_concentration.medium": "Moderate (40% ~ 70%)",
         "signal.click_concentration.low": "Low likelihood (< 40%)",
         "signal.session_cv.high": "Consistent sessions (< 0.3)",
-        "signal.session_cv.medium": "Moderate (0.3 ~ 1.0)",
-        "signal.session_cv.low": "Irregular sessions (> 1.0)",
+        "signal.session_cv.medium": "Moderate (0.3 ~ 0.85)",
+        "signal.session_cv.low": "Irregular sessions (> 0.85)",
         "signal.sequence_similarity.high": "High similarity (> 0.7)",
-        "signal.sequence_similarity.medium": "Moderate (0.5 ~ 0.7)",
+        "signal.sequence_similarity.medium": "Moderate (0.4 ~ 0.7)",
         "signal.sequence_similarity.low": "Low similarity (< 0.5)",
 
         # ---- Verdict description parts ----

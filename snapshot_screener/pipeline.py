@@ -128,7 +128,7 @@ def run_single_equipment(
         config.phash_similar_threshold,
     )
     select_representatives(features, config.selector)
-    screening = compute_screening(features)
+    screening = compute_screening(features, config.cv_high_threshold, config.cv_low_threshold)
 
     sensitivity = None
     if config.sensitivity_sweep:

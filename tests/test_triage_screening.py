@@ -43,12 +43,12 @@ class TestTriageSessionCV:
 
     def test_low_variable_sessions(self):
         """Sessions with very different click counts → low."""
-        # 3 sessions: 3, 10, 30 clicks → high CV
-        sessions = ["S1"] * 3 + ["S2"] * 10 + ["S3"] * 30
-        features = _make_features(43, session_ids=sessions)
+        # 3 sessions: 3, 5, 50 clicks → CV > 1.0
+        sessions = ["S1"] * 3 + ["S2"] * 5 + ["S3"] * 50
+        features = _make_features(58, session_ids=sessions)
         cv_val, level = _triage_session_cv(features)
         assert level == "low"
-        assert cv_val is not None and cv_val > 0.6
+        assert cv_val is not None and cv_val > 1.0
 
     def test_insufficient_data(self):
         """Single session → insufficient data."""
