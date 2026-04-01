@@ -612,12 +612,30 @@
     cursor: zoom-out;
   }
   .img-modal-overlay.active { display: flex; }
-  .img-modal-overlay img {
+
+  .modal-img-container {
+    position: relative;
+    display: inline-block;
+  }
+  .modal-img-container img {
+    display: block;
     max-width: 98vw;
     max-height: 98vh;
-    object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  .modal-click-dot {
+    display: none;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid #e11d48;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+    z-index: 2;
+    pointer-events: none;
   }
 
   @media (max-width: 860px) {
@@ -736,7 +754,7 @@
                 {% if not loop.last %}<div class="frame-line"></div>{% endif %}
               </div>
               <div class="frame-content">
-                <div class="frame-img-wrap" {% if frame.original_path %}data-original="{{ frame.original_path }}"{% endif %}>
+                <div class="frame-img-wrap" {% if frame.original_path %}data-original="{{ frame.original_path }}"{% endif %} data-x-pct="{{ frame.x_pct }}" data-y-pct="{{ frame.y_pct }}">
                   {% if frame.b64 %}
                   <img src="data:image/jpeg;base64,{{ frame.b64 }}" alt="{{ frame.fname }}">
                   <div class="click-dot" style="left:{{ frame.x_pct }}%;top:{{ frame.y_pct }}%;"></div>
@@ -866,61 +884,55 @@
 
 <!-- Image zoom modal -->
 <div class="img-modal-overlay" id="imgModal">
-  <img id="imgModalContent" src="" alt="{{ labels.report_zoom_alt }}">
+  <div class="modal-img-container">
+    <img id="imgModalContent" src="" alt="{{ labels.report_zoom_alt }}">
+    <div class="modal-click-dot" id="modalClickDot"></div>
+  </div>
 </div>
 
 <script>
 (function() {
   var modal = document.getElementById('imgModal');
   var modalImg = document.getElementById('imgModalContent');
+  var modalDot = document.getElementById('modalClickDot');
+
+  function showModal(src, xPct, yPct) {
+    modalImg.src = src;
+    if (xPct && yPct) {
+      modalDot.style.left = xPct + '%';
+      modalDot.style.top = yPct + '%';
+      modalDot.style.display = 'block';
+    } else {
+      modalDot.style.display = 'none';
+    }
+    modal.classList.add('active');
+  }
+
+  function hideModal() {
+    modal.classList.remove('active');
+    modalDot.style.display = 'none';
+  }
 
   document.querySelectorAll('.frame-img-wrap').forEach(function(wrap) {
     wrap.addEventListener('click', function() {
       var img = wrap.querySelector('img');
       if (!img) return;
 
-      // Use original file from frames/ if available, otherwise fallback to thumbnail
       var originalPath = wrap.getAttribute('data-original');
       var src = originalPath || img.src;
+      var xPct = wrap.getAttribute('data-x-pct');
+      var yPct = wrap.getAttribute('data-y-pct');
 
       var probe = new Image();
-      probe.onload = function() {
-        var natW = probe.naturalWidth;
-        var natH = probe.naturalHeight;
-        var vw = window.innerWidth * 0.98;
-        var vh = window.innerHeight * 0.98;
-
-        if (natW > vw || natH > vh) {
-          modalImg.style.width = '';
-          modalImg.style.height = '';
-          modalImg.style.maxWidth = '98vw';
-          modalImg.style.maxHeight = '98vh';
-        } else {
-          modalImg.style.width = natW + 'px';
-          modalImg.style.height = natH + 'px';
-          modalImg.style.maxWidth = '';
-          modalImg.style.maxHeight = '';
-        }
-
-        modalImg.src = src;
-        modal.classList.add('active');
-      };
-      probe.onerror = function() {
-        // Original not found, fallback to thumbnail
-        modalImg.style.maxWidth = '98vw';
-        modalImg.style.maxHeight = '98vh';
-        modalImg.style.width = '';
-        modalImg.style.height = '';
-        modalImg.src = img.src;
-        modal.classList.add('active');
-      };
+      probe.onload = function() { showModal(src, xPct, yPct); };
+      probe.onerror = function() { showModal(img.src, xPct, yPct); };
       probe.src = src;
     });
   });
 
-  modal.addEventListener('click', function() { modal.classList.remove('active'); });
+  modal.addEventListener('click', hideModal);
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') modal.classList.remove('active');
+    if (e.key === 'Escape') hideModal();
   });
 })();
 </script>
