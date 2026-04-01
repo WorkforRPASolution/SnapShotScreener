@@ -269,13 +269,13 @@
 
   .click-dot {
     position: absolute;
-    width: 18px;
-    height: 18px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: var(--click-dot);
-    border: 2px solid #ffffff;
+    border: 1px solid #ffffff;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 12px rgba(225,29,72,0.4);
+    box-shadow: 0 0 6px rgba(225,29,72,0.4);
     z-index: 2;
     pointer-events: none;
   }
@@ -283,7 +283,7 @@
   .click-dot::after {
     content: '';
     position: absolute;
-    inset: -6px;
+    inset: -3px;
     border-radius: 50%;
     border: 1px solid rgba(225,29,72,0.25);
     animation: pulse 2s ease-out infinite;
